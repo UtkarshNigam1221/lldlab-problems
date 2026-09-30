@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { workspacePathError } from './paths';
+import { testsError, workspacePathError } from './paths';
 
 describe('workspacePathError', () => {
   it('accepts nested relative paths', () => {
@@ -25,3 +25,20 @@ describe('workspacePathError', () => {
     expect(workspacePathError({ 'a/b/c.py': '', 'a/b': '' })).toBe('a/b: a file and a folder can\'t share this name');
   });
 });
+
+describe('testsError', () => {
+  it('accepts distinct flat test files', () => {
+    expect(testsError([{ stage: 'a', files: { 'a.test.js': '' } }, { stage: 'b', files: { 'b.test.js': '' } }])).toBeUndefined();
+  });
+
+  it('rejects the same test file name in two stages', () => {
+    expect(testsError([{ stage: 'a', files: { 'x.test.js': '' } }, { stage: 'b', files: { 'x.test.js': '' } }])).toBe(
+      'tests/x.test.js is defined by stages a and b; test file names must be unique',
+    );
+  });
+
+  it('rejects test files in folders', () => {
+    expect(testsError([{ stage: 'a', files: { 'sub/x.test.js': '' } }])).toBe('tests/sub/x.test.js: test files must be directly in tests/');
+  });
+});
+

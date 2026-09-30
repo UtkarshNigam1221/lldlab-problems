@@ -1,6 +1,6 @@
 import { AssertionError, deepEqual, errorMessage, show } from './harness';
 import { createRequire } from './modules';
-import { TESTS_DIR, workspacePathError } from './paths';
+import { TESTS_DIR, testsError, workspacePathError } from './paths';
 import type { Files, RunInput, RunOutput, TestResult } from './types';
 
 interface Pending {
@@ -12,7 +12,7 @@ interface Pending {
 
 /** Runs JavaScript and TypeScript workspaces; `.ts` files are type-stripped, never type-checked. */
 export async function executeJs(input: RunInput): Promise<RunOutput> {
-  const pathErr = workspacePathError(input.files);
+  const pathErr = workspacePathError(input.files) ?? testsError(input.tests);
   if (pathErr) return { results: [], stdout: '', error: pathErr };
 
   const pending: Pending[] = [];

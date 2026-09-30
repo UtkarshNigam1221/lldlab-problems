@@ -1,4 +1,4 @@
-import { TESTS_DIR, workspacePathError } from './paths';
+import { TESTS_DIR, testsError, workspacePathError } from './paths';
 import type { RunInput, RunOutput } from './types';
 
 export interface PyodideLike {
@@ -41,7 +41,8 @@ def test(name, fn=None):
         r = {"name": str(name), "stage": _lldlab_current["stage"], "file": _lldlab_current["file"], "passed": True}
         try:
             f()
-        except Exception as e:
+        except (Exception, SystemExit) as e:
+            # SystemExit too: sys.exit() in user code fails that test instead of ending the whole run.
             r["passed"] = False
             r["error"] = f"{type(e).__name__}: {e}"
         r["ms"] = (time.perf_counter() - start) * 1000
@@ -88,7 +89,7 @@ function describeThrown(e: unknown): string {
 }
 
 export async function executePython(py: PyodideLike, input: RunInput): Promise<RunOutput> {
-  const pathErr = workspacePathError(input.files);
+  const pathErr = workspacePathError(input.files) ?? testsError(input.tests);
   if (pathErr) return { results: [], stdout: '', error: pathErr };
 
   let stdout = '';

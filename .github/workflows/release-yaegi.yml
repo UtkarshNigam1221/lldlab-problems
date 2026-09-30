@@ -12,15 +12,17 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.24.x'
           cache-dependency-path: packages/yaegi-runtime/go.sum
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+          # A publishing job never restores a cache another run could have written.
+          package-manager-cache: false
       - name: Tag must match npm/package.json version
         run: test "yaegi-v$(node -p "require('./packages/yaegi-runtime/npm/package.json').version")" = "$GITHUB_REF_NAME"
       - name: Go runtime tests

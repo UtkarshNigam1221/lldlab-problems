@@ -97,6 +97,11 @@ func friendlyError(err error) string {
 
 type source struct{ name, src string }
 
+// isHarnessName reports whether a top-level function name belongs to the test harness helper.
+func isHarnessName(name string) bool {
+	return name == "test" || name == "assertEqual" || (strings.HasPrefix(name, "lldlab") && !strings.HasPrefix(name, "lldlabTests"))
+}
+
 // mergeSources joins package-main files into one, de-duplicating imports.
 // rename may rename top-level functions of file i before printing.
 // ponytail: line numbers in interpreter (not parser) errors refer to the merged file.
@@ -179,7 +184,11 @@ func run(req Request) (resp Response) {
 		mains = append(mains, source{"tests/" + t.File, t.Src})
 	}
 	found := make([]bool, len(req.Tests))
+	var reserved string
 	src, err := mergeSources(mains, func(i int, fd *ast.FuncDecl) {
+		if i > 0 && fd.Recv == nil && reserved == "" && isHarnessName(fd.Name.Name) {
+			reserved = fmt.Sprintf("%s: func %s is reserved by the test harness; rename it", mains[i].name, fd.Name.Name)
+		}
 		// Yaegi runs main() after every Eval of a main package; a user's demo main must not run during tests.
 		if i > 0 && i < firstTest && fd.Recv == nil && fd.Name.Name == "main" {
 			fd.Name.Name = "lldlabUserMain"
@@ -192,6 +201,9 @@ func run(req Request) (resp Response) {
 	if err != nil {
 		return Response{Error: friendlyError(err)}
 	}
+	if reserved != "" {
+		return Response{Error: reserved}
+	}
 
 	var entry strings.Builder
 	entry.WriteString("func lldlabRunAll() {\n")
@@ -203,7 +215,11 @@ func run(req Request) (resp Response) {
 	}
 	entry.WriteString("}\n")
 
-	i := interp.New(interp.Options{GoPath: ".", SourcecodeFilesystem: fs, Stdout: &out, Stderr: &out})
+	// Yaegi writes a trace line to Stderr for every panic, including the ones the harness recovers from
+	// for failed assertions; those traces point into the merged file and mean nothing to users.
+	// ponytail: the trace is dropped entirely; keep it if interpreter debugging ever needs it.
+	var trace bytes.Buffer
+	i := interp.New(interp.Options{GoPath: ".", SourcecodeFilesystem: fs, Stdout: &out, Stderr: &trace})
 	if err := i.Use(allowedSymbols()); err != nil {
 		return Response{Error: err.Error()}
 	}

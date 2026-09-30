@@ -80,10 +80,13 @@ export function checkSlugsKept(published: ProblemIndex, slugs: string[]): Issue[
     .map((p) => ({ problem: p.slug, message: `published problem "${p.slug}" was removed or renamed; slugs are permanent` }));
 }
 
-/** The live index, or undefined before the first publish (404). Other failures throw. */
-export async function fetchPublishedIndex(url: string): Promise<ProblemIndex | undefined> {
+/**
+ * The live index, or the HTTP status when it isn't there. S3 behind CloudFront answers 403 for a missing key,
+ * so 403 and 404 both mean "not published yet"; the caller reports the status. Other failures throw.
+ */
+export async function fetchPublishedIndex(url: string): Promise<{ index: ProblemIndex } | { missing: number }> {
   const res = await fetch(url);
-  if (res.status === 404 || res.status === 403) return undefined;
+  if (res.status === 404 || res.status === 403) return { missing: res.status };
   if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
-  return (await res.json()) as ProblemIndex;
+  return { index: (await res.json()) as ProblemIndex };
 }

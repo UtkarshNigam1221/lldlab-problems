@@ -18,7 +18,9 @@ const JS: { re: RegExp; what: string }[] = [
   { re: /^\s*import\s+['"](?!\.\.?\/)/m, what: 'an import of a package (use a relative path)' },
 ];
 
-const PY_BANNED = new Set(['js', 'pyodide', 'urllib', 'http', 'socket', 'subprocess']);
+const PY_BANNED = new Set(['js', 'pyodide', 'pyodide_js', 'urllib', 'http', 'socket', 'subprocess', 'importlib', 'builtins', 'ctypes']);
+// __import__("js") and friends reach the same modules without an import statement.
+const PY_DYNAMIC_IMPORT = /\b__import__\s*\(/;
 const PY_IMPORT = /^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+([A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*))/gm;
 
 const GO_BANNED = /^(net|os\/exec|os\/signal|plugin|syscall|unsafe)(\/|$)/;
@@ -40,6 +42,7 @@ function pyFindings(code: string): string[] {
       if (PY_BANNED.has(top)) found.add(`imports ${top}`);
     }
   }
+  if (PY_DYNAMIC_IMPORT.test(code)) found.add('uses __import__');
   return [...found];
 }
 

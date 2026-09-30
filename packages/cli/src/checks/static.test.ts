@@ -127,5 +127,22 @@ describe('static checks', () => {
       'go/stages/1-greet/starter/a/a.go imports syscall',
     ]);
   });
+
+  it('flags indirect ways to reach Python host modules', () => {
+    const src = good();
+    src.meta.languages = ['javascript', 'python'];
+    src.stages[0].languages.python = {
+      present: true,
+      starter: { 'a.py': 'import pyodide_js\nimport importlib\nimport builtins\nm = __import__("js")\n' },
+      solution: {},
+      tests: {},
+    };
+    expect(messages(checkBanned(src)).sort()).toEqual([
+      'python/stages/1-greet/starter/a.py imports builtins',
+      'python/stages/1-greet/starter/a.py imports importlib',
+      'python/stages/1-greet/starter/a.py imports pyodide_js',
+      'python/stages/1-greet/starter/a.py uses __import__',
+    ]);
+  });
 });
 
