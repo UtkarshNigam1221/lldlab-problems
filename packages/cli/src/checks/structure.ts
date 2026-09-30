@@ -5,7 +5,13 @@ export function checkStructure(src: ProblemSource): Issue[] {
   const out: string[] = [];
   if (src.yamlSlug !== src.slug) out.push(`slug "${src.yamlSlug}" in problem.yaml must match the folder name "${src.slug}"`);
   for (const f of src.extraFolders) out.push(`unexpected folder ${f}: not listed in problem.yaml`);
-  for (const s of src.stages) if (!s.readme.trim()) out.push(`stages/${s.folder}/README.md is missing or empty`);
+  const seenIds = new Set<string>();
+  for (const s of src.stages) {
+    // Results are tagged by stage id, so a repeated id would let one stage's failures count for another.
+    if (seenIds.has(s.id)) out.push(`stage id "${s.id}" is used more than once`);
+    seenIds.add(s.id);
+    if (!s.readme.trim()) out.push(`stages/${s.folder}/README.md is missing or empty`);
+  }
   for (const lang of src.meta.languages) {
     src.stages.forEach((s, i) => {
       const ls = s.languages[lang]!;

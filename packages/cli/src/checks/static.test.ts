@@ -102,4 +102,10 @@ describe('static checks', () => {
     for (let i = 0; i < 40; i++) src.stages[0].languages.javascript!.starter[`f${i}.js`] = '';
     expect(messages(checkFileCounts(src))).toEqual(['javascript/stages/1-greet has 42 starter and test files; the limit is 40']);
   });
+
+  it('stage ids must be unique', () => {
+    const src = good();
+    src.stages[1].id = 'greet';
+    expect(messages(checkStructure(src))).toContain('stage id "greet" is used more than once');
+  });
 });
