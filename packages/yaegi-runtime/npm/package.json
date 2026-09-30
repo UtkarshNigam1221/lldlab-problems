@@ -1,0 +1,9 @@
+{
+  "name": "lldlab-yaegi-runtime",
+  "version": "0.2.0",
+  "description": "Yaegi Go interpreter compiled to WebAssembly for the LLDLab in-browser test runner (exposes globalThis.yaegiRun).",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/UtkarshNigam1221/lldlab-problems.git", "directory": "packages/yaegi-runtime" },
+  "files": ["yaegi.wasm", "wasm_exec.js", "README.md", "LICENSE-yaegi", "LICENSE-go"],
+  "keywords": ["go", "yaegi", "wasm", "interpreter", "lldlab"]
+}
