@@ -18,9 +18,19 @@ function pathError(p: string): string | undefined {
 
 /** First invalid workspace path, as a user-facing message; undefined when all are valid. */
 export function workspacePathError(files: Files): string | undefined {
-  for (const p of Object.keys(files)) {
+  const paths = Object.keys(files);
+  for (const p of paths) {
     const err = pathError(p);
     if (err) return err;
+  }
+  // "lot" and "lot/lot.py" can't both exist: one would have to be a file and a folder.
+  const all = new Set(paths);
+  for (const p of paths) {
+    const parts = p.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const dir = parts.slice(0, i).join('/');
+      if (all.has(dir)) return `${dir}: a file and a folder can't share this name`;
+    }
   }
   return undefined;
 }

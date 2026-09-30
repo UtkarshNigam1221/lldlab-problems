@@ -19,4 +19,9 @@ describe('workspacePathError', () => {
   ])('rejects %j', (p, message) => {
     expect(workspacePathError({ [p]: '' })).toBe(message);
   });
+
+  it('rejects a file and a folder with the same name', () => {
+    expect(workspacePathError({ lot: 'x', 'lot/lot.py': 'y' })).toBe('lot: a file and a folder can\'t share this name');
+    expect(workspacePathError({ 'a/b/c.py': '', 'a/b': '' })).toBe('a/b: a file and a folder can\'t share this name');
+  });
 });

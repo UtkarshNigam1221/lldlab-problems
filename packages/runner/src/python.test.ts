@@ -68,4 +68,17 @@ describe('executePython', () => {
     const out = await executePython(py, { files: { 'tests/x.py': '' }, tests: [] });
     expect(out.error).toBe("tests/x.py: the tests/ folder is reserved for the problem's tests");
   });
+
+  it('formats non-Error exceptions from Pyodide', async () => {
+    const fake = {
+      runPythonAsync: async () => undefined,
+      FS: { mkdirTree: () => { throw { name: 'ErrnoError', errno: 20, code: 'ENOTDIR' }; }, writeFile: () => {} },
+      setStdout: () => {},
+      setStderr: () => {},
+      globals: { get: () => () => ({}) },
+    } as unknown as PyodideLike;
+    const out = await executePython(fake, { files: { 'a/b.py': '' }, tests: [] });
+    expect(out.error).toBe('ErrnoError ENOTDIR');
+  });
 });
+

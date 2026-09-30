@@ -71,6 +71,22 @@ function cleanError(message: string): string {
   return (first >= 0 ? lines.slice(first) : lines).join('\n').trim();
 }
 
+/** Pyodide's FS throws ErrnoError objects that aren't Errors; String() would give "[object Object]". */
+function describeThrown(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object') {
+    const o = e as { name?: unknown; code?: unknown; message?: unknown };
+    const parts = [o.name, o.code ?? o.message].filter((x) => typeof x === 'string' && x);
+    if (parts.length) return parts.join(' ');
+    try {
+      return JSON.stringify(e);
+    } catch {
+      // fall through
+    }
+  }
+  return String(e);
+}
+
 export async function executePython(py: PyodideLike, input: RunInput): Promise<RunOutput> {
   const pathErr = workspacePathError(input.files);
   if (pathErr) return { results: [], stdout: '', error: pathErr };
@@ -99,7 +115,7 @@ export async function executePython(py: PyodideLike, input: RunInput): Promise<R
     const json = (await py.runPythonAsync(`_lldlab_run(json.loads(${JSON.stringify(JSON.stringify(list))}))`, { globals: ns })) as string;
     return { results: JSON.parse(json), stdout };
   } catch (e) {
-    const out: RunOutput = { results: [], stdout, error: cleanError(e instanceof Error ? e.message : String(e)) };
+    const out: RunOutput = { results: [], stdout, error: cleanError(describeThrown(e)) };
     if ((e as { pyodide_fatal_error?: boolean })?.pyodide_fatal_error) out.workerDead = true;
     return out;
   } finally {
