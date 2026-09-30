@@ -12,4 +12,15 @@ npm ci
 npm run problems -- test parking-lot
 ```
 
+## Releasing
+
+Each package publishes from its own tag through npm Trusted Publishing:
+
+| Package | Bump | Tag |
+|---|---|---|
+| `lldlab-runner` | `packages/runner/package.json` | `runner-v<version>` |
+| `lldlab-yaegi-runtime` | `packages/yaegi-runtime/npm/package.json`, then the pin in `packages/runner/src/config.ts` | `yaegi-v<version>` |
+
+Publish the runtime first when both change: the runner's `config.test.ts` checks that its pin matches the runtime's version.
+
 MIT licensed.
