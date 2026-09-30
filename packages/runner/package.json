@@ -1,0 +1,24 @@
+{
+  "name": "lldlab-runner",
+  "version": "0.1.0",
+  "description": "In-browser test runner for LLDLab problems: JavaScript, TypeScript, Python (Pyodide) and Go (Yaegi)",
+  "license": "MIT",
+  "type": "module",
+  "repository": { "type": "git", "url": "git+https://github.com/UtkarshNigam1221/lldlab-problems.git", "directory": "packages/runner" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "lldlab-source": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": { "sucrase": "^3.35.1" },
+  "devDependencies": { "pyodide": "0.29.5", "tsup": "^8" }
+}
