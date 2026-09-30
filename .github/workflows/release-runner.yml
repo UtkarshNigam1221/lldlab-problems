@@ -1,0 +1,25 @@
+name: Release lldlab-runner
+
+on:
+  push:
+    tags: ['runner-v*']
+
+permissions:
+  contents: read
+  id-token: write # npm Trusted Publishing (OIDC) + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Tag must match package.json version
+        run: test "runner-v$(node -p "require('./packages/runner/package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm test --workspace packages/runner
+      # Trusted Publishing needs npm >= 11.5; Node 22 ships npm 10.
+      - run: npx -y npm@11 publish --provenance --access public --workspace packages/runner
