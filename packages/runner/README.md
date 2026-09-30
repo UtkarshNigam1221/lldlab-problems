@@ -5,7 +5,7 @@ Runs LLDLab problem tests in a Web Worker: JavaScript and TypeScript (Sucrase, n
 ```ts
 import { runTests, runInputFor } from 'lldlab-runner';
 
-const out = await runTests('go', runInputFor(problem, 'go', workspaceFiles, stageIndex), { timeoutMs: problem.meta.timeLimitMs });
+const out = await runTests('go', runInputFor(problem, 'go', workspaceFiles, stageIndex), { timeoutMs: problem.meta.timeLimitMs, problem: problem.slug });
 // out.results: [{ name, stage, file, passed, error?, ms }]
 ```
 

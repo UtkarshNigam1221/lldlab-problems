@@ -19,6 +19,8 @@ type Listener = (m: WorkerMessage) => void;
 interface Slot {
   worker: WorkerLike;
   listeners: Set<Listener>;
+  /** Problem slug of the last run; a different problem gets a fresh worker. */
+  problem?: string;
 }
 
 let factory: () => WorkerLike = () =>
@@ -75,9 +77,23 @@ const START_TIMEOUT_MS = 60_000;
 export function runTests(
   lang: Language,
   input: RunInput,
-  { timeoutMs = 5000, startTimeoutMs = START_TIMEOUT_MS }: { timeoutMs?: number; startTimeoutMs?: number } = {},
+  {
+    timeoutMs = 5000,
+    startTimeoutMs = START_TIMEOUT_MS,
+    problem,
+  }: {
+    timeoutMs?: number;
+    startTimeoutMs?: number;
+    /** Problem slug. Pyodide/Yaegi workers are reused within a problem but never across problems. */
+    problem?: string;
+  } = {},
 ): Promise<RunOutput> {
-  const slot = slotFor(lang);
+  let slot = slotFor(lang);
+  if (problem !== undefined && slot.problem !== undefined && slot.problem !== problem) {
+    drop(lang, slot);
+    slot = slotFor(lang);
+  }
+  if (problem !== undefined) slot.problem = problem;
   return new Promise((resolve) => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (out: RunOutput, dropWorker: boolean) => {

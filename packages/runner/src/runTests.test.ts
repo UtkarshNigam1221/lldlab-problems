@@ -31,6 +31,21 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('runTests', () => {
+  it('starts a fresh worker when the problem changes, so state never leaks between problems', async () => {
+    setWorkerFactory(() => new FakeWorker((w) => { w.emit({ type: 'started' }, 0); w.emit({ type: 'done', output: OK }, 1); }));
+    const run = async (problem: string) => {
+      const p = runTests('python', INPUT, { problem });
+      await vi.runAllTimersAsync();
+      return p;
+    };
+    await run('a');
+    await run('a');
+    expect(FakeWorker.created.length).toBe(1);
+    await run('b');
+    expect(FakeWorker.created.length).toBe(2);
+    expect(FakeWorker.created[0].terminated).toBe(true);
+  });
+
   it('sends the run input to the worker', async () => {
     const seen: unknown[] = [];
     setWorkerFactory(() => new FakeWorker((w, msg) => { seen.push(msg); w.emit({ type: 'started' }, 0); w.emit({ type: 'done', output: OK }, 1); }));
