@@ -144,3 +144,17 @@ func TestPanicInsideTestFailsOnlyThatTest(t *testing.T) {
 		t.Fatalf("got %+v", rs)
 	}
 }
+
+func TestUserMainDoesNotRunDuringTests(t *testing.T) {
+	resp := run(Request{
+		Helper:    goHelper,
+		Workspace: map[string]string{"main.go": "package main\n\nimport \"fmt\"\n\nfunc main() { fmt.Println(\"MAIN RAN\") }\n\nfunc Two() int { return 2 }\n"},
+		Tests:     []TestFile{{Stage: "s", File: "m_test.go", Src: "package main\n\nfunc lldlabTests() {\n\ttest(\"two\", func() { assertEqual(Two(), 2) })\n}\n"}},
+	})
+	if resp.Error != "" {
+		t.Fatalf("unexpected error: %s", resp.Error)
+	}
+	if strings.Contains(resp.Stdout, "MAIN RAN") {
+		t.Fatalf("user main() ran during tests; stdout = %q", resp.Stdout)
+	}
+}

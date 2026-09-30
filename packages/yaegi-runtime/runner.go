@@ -174,6 +174,10 @@ func run(req Request) (resp Response) {
 	}
 	found := make([]bool, len(req.Tests))
 	src, err := mergeSources(mains, func(i int, fd *ast.FuncDecl) {
+		// Yaegi runs main() after every Eval of a main package; a user's demo main must not run during tests.
+		if i > 0 && i < firstTest && fd.Recv == nil && fd.Name.Name == "main" {
+			fd.Name.Name = "lldlabUserMain"
+		}
 		if i >= firstTest && fd.Recv == nil && fd.Name.Name == "lldlabTests" {
 			fd.Name.Name = fmt.Sprintf("lldlabTests_%d", i-firstTest)
 			found[i-firstTest] = true

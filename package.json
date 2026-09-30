@@ -2,12 +2,15 @@
   "name": "lldlab-problems-repo",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/runner", "packages/cli"],
+  "workspaces": [
+    "packages/runner",
+    "packages/cli"
+  ],
   "scripts": {
     "test": "npm test --workspaces",
     "typecheck": "tsc -p packages/runner && tsc -p packages/cli",
     "problems": "tsx --conditions=lldlab-source packages/cli/src/cli.ts",
-    "build:yaegi": "cd packages/yaegi-runtime && GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o npm/yaegi.wasm . && cp \"$(go env GOROOT)/lib/wasm/wasm_exec.js\" npm/wasm_exec.js && cp \"$(go list -m -f '{{.Dir}}' github.com/traefik/yaegi)/LICENSE\" npm/LICENSE-yaegi && cp \"$(go env GOROOT)/LICENSE\" npm/LICENSE-go"
+    "build:yaegi": "cd packages/yaegi-runtime && GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o npm/yaegi.wasm . && cp -f \"$(go env GOROOT)/lib/wasm/wasm_exec.js\" npm/wasm_exec.js && cp -f \"$(go list -m -f '{{.Dir}}' github.com/traefik/yaegi)/LICENSE\" npm/LICENSE-yaegi && cp -f \"$(go env GOROOT)/LICENSE\" npm/LICENSE-go"
   },
   "devDependencies": {
     "@types/node": "^25",
