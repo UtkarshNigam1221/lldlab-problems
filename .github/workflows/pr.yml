@@ -1,0 +1,43 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Also bounds a contributed solution with an infinite loop (the CLI runs problems in-process).
+    timeout-minutes: 20
+    env:
+      LLDLAB_YAEGI_DIR: ${{ github.workspace }}/packages/yaegi-runtime/npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache-dependency-path: packages/yaegi-runtime/go.sum
+      - run: npm ci
+      - name: Go runtime tests
+        working-directory: packages/yaegi-runtime
+        run: go test ./...
+      - run: npm run build:yaegi
+      - run: npm run typecheck
+      - run: npm test
+      - name: Check problems
+        env:
+          PROBLEMS_URL: ${{ vars.PROBLEMS_URL }}
+        run: |
+          if [ -n "$PROBLEMS_URL" ]; then
+            npm run problems -- test --published "$PROBLEMS_URL/index.json"
+          else
+            npm run problems -- test
+          fi

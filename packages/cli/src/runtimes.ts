@@ -35,7 +35,7 @@ async function loadYaegi(dir?: string): Promise<YaegiRun> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = globalThis as any;
   const go = new g.Go();
-  const { instance } = await WebAssembly.instantiate(wasm, go.importObject);
+  const { instance } = await WebAssembly.instantiate(new Uint8Array(wasm), go.importObject);
   void go.run(instance);
   return (req) => g.yaegiRun(req);
 }
