@@ -1,0 +1,21 @@
+slug: parking-lot
+title: Parking Lot
+summary: Park and unpark vehicles by size, then add pluggable pricing and ticket history.
+difficulty: medium
+kind: implement
+patterns: [strategy]
+tags: []
+authors: [UtkarshNigam1221]
+timeLimitMs: 5000
+languages: [typescript]
+entry:
+  typescript: src/lot.ts
+readonly:
+  - src/vehicle.ts
+stages:
+  - id: basic
+    title: Park and unpark
+  - id: pricing
+    title: Pluggable pricing
+  - id: history
+    title: Ticket history
