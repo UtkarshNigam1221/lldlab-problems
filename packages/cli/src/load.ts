@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import Ajv from 'ajv';
 import { parse } from 'yaml';
@@ -40,19 +40,35 @@ const validate = new Ajv({ allErrors: true }).compile(schema);
 const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
 const readText = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : undefined);
 
-/** Every file under dir, keyed by POSIX path relative to dir. Missing dir → {}. */
+/** Every file under dir, keyed by POSIX path relative to dir. Missing dir → {}. Dotfiles are skipped. */
 export function readTree(dir: string): Files {
   const out: Files = {};
   if (!isDir(dir)) return out;
   const walk = (rel: string) => {
     for (const name of readdirSync(path.join(dir, rel)).sort()) {
+      if (name.startsWith('.')) continue;
       const r = rel ? `${rel}/${name}` : name;
-      if (isDir(path.join(dir, r))) walk(r);
+      if (lstatSync(path.join(dir, r)).isDirectory()) walk(r);
       else out[r] = readFileSync(path.join(dir, r), 'utf8');
     }
   };
   walk('');
   return out;
+}
+
+/**
+ * Symlinks under dir, relative to dir. Contributed folders are untrusted: following a link could publish
+ * a file from the build machine (for example /proc/self/environ) or loop forever.
+ */
+function findSymlinks(dir: string, rel = ''): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(path.join(dir, rel)).sort()) {
+    const r = rel ? `${rel}/${name}` : name;
+    const st = lstatSync(path.join(dir, r));
+    if (st.isSymbolicLink()) found.push(r);
+    else if (st.isDirectory()) found.push(...findSymlinks(dir, r));
+  }
+  return found;
 }
 
 export function listProblemDirs(root: string): string[] {
@@ -65,6 +81,11 @@ export function listProblemDirs(root: string): string[] {
 export function loadProblem(dir: string): { source?: ProblemSource; issues: Issue[] } {
   const slug = path.basename(dir);
   const issue = (message: string): Issue => ({ problem: slug, message });
+
+  if (isDir(dir)) {
+    const links = findSymlinks(dir);
+    if (links.length) return { issues: links.map((l) => issue(`${l} is a symlink; symlinks aren't allowed`)) };
+  }
 
   const yamlText = readText(path.join(dir, 'problem.yaml'));
   if (yamlText === undefined) return { issues: [issue('problem.yaml is missing')] };

@@ -1,3 +1,6 @@
+import { cpSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { listProblemDirs, loadProblem, readTree } from './load';
@@ -57,5 +60,28 @@ describe('loadProblem', () => {
 describe('listProblemDirs', () => {
   it('lists problem folders sorted', () => {
     expect(listProblemDirs(fx('good')).map((d) => d.split('/').pop())).toEqual(['hello']);
+  });
+});
+
+describe('untrusted file trees', () => {
+  const copy = () => {
+    const dir = path.join(mkdtempSync(path.join(os.tmpdir(), 'load-')), 'hello');
+    cpSync(fx('good/hello'), dir, { recursive: true });
+    return dir;
+  };
+
+  it('rejects symlinks instead of following them', () => {
+    const dir = copy();
+    symlinkSync('/etc/hosts', path.join(dir, 'javascript/stages/1-greet/starter/leak.js'));
+    const { source, issues } = loadProblem(dir);
+    expect(source).toBeUndefined();
+    expect(issues).toEqual([{ problem: 'hello', message: "javascript/stages/1-greet/starter/leak.js is a symlink; symlinks aren't allowed" }]);
+  });
+
+  it('ignores dotfiles such as .DS_Store', () => {
+    const dir = copy();
+    writeFileSync(path.join(dir, 'javascript/stages/1-greet/starter/.DS_Store'), 'junk');
+    const { source } = loadProblem(dir);
+    expect(Object.keys(source!.stages[0].languages.javascript!.starter)).toEqual(['greet.js']);
   });
 });
