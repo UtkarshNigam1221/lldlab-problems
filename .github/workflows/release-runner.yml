@@ -17,7 +17,8 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm ci
+      # No install scripts: this job can publish to npm, so dependencies must not run code during install.
+      - run: npm ci --ignore-scripts
       - name: Tag must match package.json version
         run: test "runner-v$(node -p "require('./packages/runner/package.json').version")" = "$GITHUB_REF_NAME"
       - run: npm test --workspace packages/runner
