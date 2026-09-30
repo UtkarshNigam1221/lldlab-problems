@@ -1,0 +1,11 @@
+slug: Wrong_Slug
+title: Wrong
+summary: x
+difficulty: trivial
+kind: implement
+patterns: []
+authors: [octocat]
+timeLimitMs: 5000
+languages: [rust]
+entry: {}
+stages: []

@@ -1,0 +1,16 @@
+slug: hello
+title: Hello
+summary: Greets people.
+difficulty: easy
+kind: implement
+patterns: []
+authors: [octocat]
+timeLimitMs: 5000
+languages: [javascript]
+entry:
+  javascript: greet.js
+stages:
+  - id: greet
+    title: Greet
+  - id: shout
+    title: Shout
