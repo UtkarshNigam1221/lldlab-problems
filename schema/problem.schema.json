@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLDLab problem.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "title", "summary", "difficulty", "kind", "patterns", "authors", "timeLimitMs", "languages", "entry", "stages"],
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 },
+    "language": { "enum": ["go", "python", "typescript", "javascript"] }
+  },
+  "properties": {
+    "slug": { "$ref": "#/definitions/id" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "difficulty": { "enum": ["easy", "medium", "hard"] },
+    "kind": { "enum": ["implement", "debug"] },
+    "patterns": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+    "tags": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+    "authors": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$" } },
+    "timeLimitMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+    "languages": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/language" } },
+    "entry": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/language" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "readonly": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      }
+    }
+  }
+}

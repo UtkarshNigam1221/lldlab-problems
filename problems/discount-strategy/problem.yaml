@@ -1,0 +1,18 @@
+slug: discount-strategy
+title: Discount Strategy
+summary: "Shopping cart whose total is computed by interchangeable discount strategies: none, percent-off and flat-off."
+difficulty: easy
+kind: implement
+patterns: [strategy]
+tags: []
+authors: [UtkarshNigam1221]
+timeLimitMs: 5000
+languages: [javascript, typescript, python, go]
+entry:
+  javascript: cart.js
+  typescript: cart.ts
+  python: cart.py
+  go: cart.go
+stages:
+  - id: cart
+    title: Discountable cart
