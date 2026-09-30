@@ -1,6 +1,6 @@
 {
   "name": "lldlab-yaegi-runtime",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Yaegi Go interpreter compiled to WebAssembly for the LLDLab in-browser test runner (exposes globalThis.yaegiRun).",
   "license": "Apache-2.0",
   "repository": {
