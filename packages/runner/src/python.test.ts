@@ -80,5 +80,17 @@ describe('executePython', () => {
     const out = await executePython(fake, { files: { 'a/b.py': '' }, tests: [] });
     expect(out.error).toBe('ErrnoError ENOTDIR');
   });
+
+  it('sys.exit() inside a test fails only that test', async () => {
+    const out = await executePython(py, {
+      files: { 'm.py': 'import sys\n\ndef quit():\n    sys.exit(3)\n' },
+      tests: [{ stage: 's', files: { 'test_m.py': 'import m\n\ntest("exits", m.quit)\ntest("after", lambda: assertEqual(1, 1))\n' } }],
+    });
+    expect(out.error).toBeUndefined();
+    expect(out.results.map((r) => [r.name, r.passed, r.error])).toEqual([
+      ['exits', false, 'SystemExit: 3'],
+      ['after', true, undefined],
+    ]);
+  });
 });
 

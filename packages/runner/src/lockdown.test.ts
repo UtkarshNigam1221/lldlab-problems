@@ -44,7 +44,7 @@ describe('lockdown', () => {
 
   it('covers every name in the spec', () => {
     expect([...BLOCKED_GLOBALS].sort()).toEqual(
-      ['BroadcastChannel', 'EventSource', 'SharedWorker', 'WebSocket', 'WebTransport', 'Worker', 'XMLHttpRequest', 'caches', 'fetch', 'importScripts', 'indexedDB'].sort(),
+      ['BroadcastChannel', 'EventSource', 'FontFace', 'SharedWorker', 'WebSocket', 'WebSocketStream', 'WebTransport', 'Worker', 'XMLHttpRequest', 'caches', 'fetch', 'fonts', 'importScripts', 'indexedDB'].sort(),
     );
   });
 });

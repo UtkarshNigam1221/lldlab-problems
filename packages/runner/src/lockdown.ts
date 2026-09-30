@@ -11,6 +11,10 @@ export const BLOCKED_GLOBALS = [
   'SharedWorker',
   'BroadcastChannel',
   'WebTransport',
+  'WebSocketStream',
+  // FontFace can load a font from any URL, and self.fonts exposes the worker's font loader.
+  'FontFace',
+  'fonts',
 ] as const;
 
 const LOCKED = { value: undefined, writable: false, configurable: false, enumerable: false };

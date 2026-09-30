@@ -174,3 +174,24 @@ func TestOtherNetPackagesStayBlocked(t *testing.T) {
 		}
 	}
 }
+
+func TestFailingAssertionKeepsStdoutClean(t *testing.T) {
+	resp := run(Request{Helper: goHelper, Workspace: map[string]string{"x.go": "package main\n\nimport \"fmt\"\n\nfunc Say() { fmt.Println(\"out\") }\n"},
+		Tests: []TestFile{{Stage: "s", File: "p_test.go", Src: "package main\n\nfunc lldlabTests() {\n\ttest(\"fail\", func() { Say(); assertEqual(1, 2) })\n}\n"}}})
+	if resp.Error != "" {
+		t.Fatalf("unexpected error: %s", resp.Error)
+	}
+	if resp.Stdout != "out\n" {
+		t.Fatalf("stdout = %q, want only the user's output", resp.Stdout)
+	}
+}
+
+func TestHarnessNamesAreReserved(t *testing.T) {
+	for _, name := range []string{"test", "assertEqual", "lldlabResultsJSON"} {
+		resp := run(Request{Helper: goHelper, Workspace: map[string]string{"x.go": "package main\n\nfunc " + name + "() {}\n"}})
+		want := "x.go: func " + name + " is reserved by the test harness; rename it"
+		if resp.Error != want {
+			t.Fatalf("%s: error = %q, want %q", name, resp.Error, want)
+		}
+	}
+}

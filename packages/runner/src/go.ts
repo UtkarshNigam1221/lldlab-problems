@@ -1,4 +1,4 @@
-import { workspacePathError } from './paths';
+import { testsError, workspacePathError } from './paths';
 import type { RunInput, RunOutput } from './types';
 
 export type YaegiRun = (requestJson: string) => { stdout: string; results?: string; error?: string };
@@ -51,7 +51,7 @@ func lldlabResultsJSON() string {
 `;
 
 export async function executeGo(run: YaegiRun, input: RunInput): Promise<RunOutput> {
-  const pathErr = workspacePathError(input.files);
+  const pathErr = workspacePathError(input.files) ?? testsError(input.tests);
   if (pathErr) return { results: [], stdout: '', error: pathErr };
   const tests = input.tests.flatMap((s) => Object.entries(s.files).map(([file, src]) => ({ stage: s.stage, file, src })));
   const out = run(JSON.stringify({ helper: GO_HELPER, workspace: input.files, tests }));

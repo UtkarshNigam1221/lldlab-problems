@@ -1,4 +1,4 @@
-import type { Files } from './types';
+import type { Files, StageTests } from './types';
 
 /** Test files are mounted here; user workspaces may not use it. */
 export const TESTS_DIR = 'tests';
@@ -30,6 +30,23 @@ export function workspacePathError(files: Files): string | undefined {
     for (let i = 1; i < parts.length; i++) {
       const dir = parts.slice(0, i).join('/');
       if (all.has(dir)) return `${dir}: a file and a folder can't share this name`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Test files are mounted flat under tests/, so two stages can't share a file name (one would silently
+ * replace the other) and names can't contain folders.
+ */
+export function testsError(tests: StageTests[]): string | undefined {
+  const owner = new Map<string, string>();
+  for (const s of tests) {
+    for (const file of Object.keys(s.files)) {
+      if (file.includes('/') || file.includes('\\')) return `${TESTS_DIR}/${file}: test files must be directly in ${TESTS_DIR}/`;
+      const first = owner.get(file);
+      if (first !== undefined) return `${TESTS_DIR}/${file} is defined by stages ${first} and ${s.stage}; test file names must be unique`;
+      owner.set(file, s.stage);
     }
   }
   return undefined;

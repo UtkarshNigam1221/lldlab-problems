@@ -70,4 +70,10 @@ describe('executeJs', () => {
     const out = await executeJs({ files: { 'tests/fake.test.js': '' }, tests: [] });
     expect(out.error).toBe("tests/fake.test.js: the tests/ folder is reserved for the problem's tests");
   });
+
+  it('rejects two stages with the same test file name instead of running only one', async () => {
+    const out = await executeJs({ files: {}, tests: [{ stage: 'a', files: { 't.test.js': "test('a', () => {});" } }, { stage: 'b', files: { 't.test.js': "test('b', () => {});" } }] });
+    expect(out.error).toBe('tests/t.test.js is defined by stages a and b; test file names must be unique');
+  });
 });
+

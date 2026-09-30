@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import type { Language } from 'lldlab-runner';
+import { lockdown, type Language } from 'lldlab-runner';
 import { checkCompiledSize, checkSlugsKept, compileProblem, fetchPublishedIndex, writeBuild } from './build';
 import { staticChecks } from './checks/static';
 import { runChecks } from './checks/run';
@@ -48,8 +48,8 @@ export async function main(argv: string[], io: { log(s: string): void } = consol
 
   if (values.published) {
     const published = await fetchPublishedIndex(values.published);
-    if (published) issues.push(...checkSlugsKept(published, allDirs.map((d) => path.basename(d))));
-    else io.log(`note: ${values.published} not published yet; skipped the slug check`);
+    if ('index' in published) issues.push(...checkSlugsKept(published.index, allDirs.map((d) => path.basename(d))));
+    else io.log(`note: ${values.published} returned HTTP ${published.missing} (not published yet?); skipped the slug check`);
   } else {
     io.log('note: no --published index; skipped the slug check');
   }
@@ -57,6 +57,9 @@ export async function main(argv: string[], io: { log(s: string): void } = consol
   if (command === 'test' && !issues.length) {
     const langs = [...new Set(sources.flatMap((s) => s.meta.languages))] as Language[];
     const runtimes = await loadRuntimes(langs, { yaegiDir: values['yaegi-dir'] || undefined });
+    // Same as the browser worker: once the runtimes are loaded, contributed code gets no network globals.
+    // ponytail: Node globals such as process stay reachable; the PR job has no secrets and a read-only token.
+    lockdown(globalThis);
     for (const src of sources) {
       const { issues: runIssues, reports } = await runChecks(src, runtimes);
       io.log(`${runIssues.length ? '✗' : '✓'} ${src.slug}`);
