@@ -4,3 +4,4 @@ packages/yaegi-runtime/npm/yaegi.wasm
 packages/yaegi-runtime/npm/wasm_exec.js
 packages/yaegi-runtime/npm/LICENSE-yaegi
 packages/yaegi-runtime/npm/LICENSE-go
+.DS_Store

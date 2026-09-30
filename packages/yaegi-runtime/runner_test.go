@@ -158,3 +158,19 @@ func TestUserMainDoesNotRunDuringTests(t *testing.T) {
 		t.Fatalf("user main() ran during tests; stdout = %q", resp.Stdout)
 	}
 }
+
+func TestURLParsingPackagesAreAllowed(t *testing.T) {
+	rs := mustRun(t, nil, TestFile{Stage: "s", File: "u_test.go", Src: "package main\n\nimport (\n\t\"net/netip\"\n\t\"net/url\"\n)\n\nfunc lldlabTests() {\n\ttest(\"url\", func() { u, _ := url.Parse(\"https://x.test/a?b=1\"); assertEqual(u.Query().Get(\"b\"), \"1\") })\n\ttest(\"netip\", func() { a, _ := netip.ParseAddr(\"10.0.0.1\"); assertEqual(a.Is4(), true) })\n}\n"})
+	if len(rs) != 2 || !rs[0].Passed || !rs[1].Passed {
+		t.Fatalf("got %+v", rs)
+	}
+}
+
+func TestOtherNetPackagesStayBlocked(t *testing.T) {
+	for _, pkg := range []string{"net", "net/http", "net/rpc", "net/smtp"} {
+		resp := run(Request{Helper: goHelper, Tests: []TestFile{{Stage: "s", File: "x_test.go", Src: "package main\n\nimport _ \"" + pkg + "\"\n\nfunc lldlabTests() {}\n"}}})
+		if !strings.Contains(resp.Error, `package "`+pkg+`" isn't available in this runner`) {
+			t.Fatalf("%s: error = %q", pkg, resp.Error)
+		}
+	}
+}

@@ -1,6 +1,6 @@
 # lldlab-runner
 
-Runs LLDLab problem tests in a Web Worker: JavaScript and TypeScript (Sucrase, no type checking), Python (Pyodide 0.29.5), Go (Yaegi, `lldlab-yaegi-runtime@0.2.0`).
+Runs LLDLab problem tests in a Web Worker: JavaScript and TypeScript (Sucrase, no type checking), Python (Pyodide 0.29.5), Go (Yaegi, `lldlab-yaegi-runtime@0.2.1`).
 
 ```ts
 import { runTests, runInputFor } from 'lldlab-runner';

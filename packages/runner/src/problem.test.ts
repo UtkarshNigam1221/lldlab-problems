@@ -64,4 +64,12 @@ describe('stage helpers', () => {
     expect(cumulativeStarter(p, 'go', 1)).toEqual({});
     expect(testsThrough(p, 'go', 0)).toEqual([{ stage: 'one', files: {} }]);
   });
+
+  it('unlock treats object-prototype names like constructor as ordinary paths', () => {
+    const q: CompiledProblem = { ...p, stages: [p.stages[0], { ...p.stages[1], languages: { javascript: { starter: { constructor: 'C', toString: 'S' }, tests: {} } } }] };
+    const r = unlockStage(q, 'javascript', { 'a.js': 'A' }, 1);
+    expect(r.files).toEqual({ 'a.js': 'A', constructor: 'C', toString: 'S' });
+    expect(r.renamed).toEqual([]);
+  });
 });
+

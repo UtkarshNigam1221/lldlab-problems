@@ -4,17 +4,17 @@
 
 ```js
 // In a (Web) Worker:
-await import('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.0/wasm_exec.js');
+await import('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.1/wasm_exec.js');
 const go = new Go();
 const { instance } = await WebAssembly.instantiateStreaming(
-  fetch('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.0/yaegi.wasm'), go.importObject);
+  fetch('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.1/yaegi.wasm'), go.importObject);
 go.run(instance);
 const { stdout, results, error } = globalThis.yaegiRun(JSON.stringify({ helper, workspace, tests }));
 ```
 
 - `workspace`: `{ path: source }`. Root-level `.go` files are `package main`; files in folders are packages imported as `app/<folder>`.
 - `tests`: `[{ stage, file, src }]`, each a `package main` file defining `func lldlabTests()`.
-- `net`, `os/exec`, `os/signal`, `plugin`, `syscall` and `unsafe` can't be imported.
+- `net` (except the parsing-only `net/url` and `net/netip`), `os/exec`, `os/signal`, `plugin`, `syscall` and `unsafe` can't be imported.
 
 0.1.0 (single-file `yaegiRun(files, entry)`) stays published for older clients.
 

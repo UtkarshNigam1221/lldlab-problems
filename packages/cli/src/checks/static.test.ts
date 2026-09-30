@@ -108,4 +108,24 @@ describe('static checks', () => {
     src.stages[1].id = 'greet';
     expect(messages(checkStructure(src))).toContain('stage id "greet" is used more than once');
   });
+
+  it('allows the Go URL parsing packages the runtime allows', () => {
+    const src = good();
+    src.meta.languages = ['javascript', 'go'];
+    src.stages[0].languages.go = { present: true, starter: { 'a/a.go': 'package a\n\nimport (\n\t"net/url"\n\t"net/netip"\n\t"net/http"\n)\n' }, solution: {}, tests: {} };
+    const m = messages(checkBanned(src));
+    expect(m).toEqual(['go/stages/1-greet/starter/a/a.go imports net/http']);
+  });
+
+  it('flags every Go package the runtime blocks', () => {
+    const src = good();
+    src.meta.languages = ['javascript', 'go'];
+    src.stages[0].languages.go = { present: true, starter: { 'a/a.go': 'package a\n\nimport (\n\t"plugin"\n\t"os/signal"\n\t"syscall"\n)\n' }, solution: {}, tests: {} };
+    expect(messages(checkBanned(src)).sort()).toEqual([
+      'go/stages/1-greet/starter/a/a.go imports os/signal',
+      'go/stages/1-greet/starter/a/a.go imports plugin',
+      'go/stages/1-greet/starter/a/a.go imports syscall',
+    ]);
+  });
 });
+
