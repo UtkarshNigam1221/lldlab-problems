@@ -4,10 +4,10 @@
 
 ```js
 // In a (Web) Worker:
-await import('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.1/wasm_exec.js');
+await import('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.2/wasm_exec.js');
 const go = new Go();
 const { instance } = await WebAssembly.instantiateStreaming(
-  fetch('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.1/yaegi.wasm'), go.importObject);
+  fetch('https://cdn.jsdelivr.net/npm/lldlab-yaegi-runtime@0.2.2/yaegi.wasm'), go.importObject);
 go.run(instance);
 const { stdout, results, error } = globalThis.yaegiRun(JSON.stringify({ helper, workspace, tests }));
 ```

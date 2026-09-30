@@ -1,6 +1,6 @@
 {
   "name": "lldlab-runner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "In-browser test runner for LLDLab problems: JavaScript, TypeScript, Python (Pyodide) and Go (Yaegi)",
   "license": "MIT",
   "type": "module",
