@@ -82,13 +82,15 @@ export function testsThrough(p: CompiledProblem, lang: Language, stage: number):
 export function unlockStage(p: CompiledProblem, lang: Language, workspace: Files, stage: number): { files: Files; renamed: { from: string; to: string }[] } {
   const files: Files = { ...workspace };
   const renamed: { from: string; to: string }[] = [];
+  // Own keys only: `in` would treat paths like "constructor" as already present.
+  const has = (path: string) => Object.prototype.hasOwnProperty.call(files, path);
   for (const [path, src] of Object.entries(langStage(p, lang, stage).starter)) {
-    if (!(path in files)) {
+    if (!has(path)) {
       files[path] = src;
       continue;
     }
     let to = `${path}.part${stage + 1}`;
-    for (let n = 2; to in files; n++) to = `${path}.part${stage + 1}-${n}`;
+    for (let n = 2; has(to); n++) to = `${path}.part${stage + 1}-${n}`;
     files[to] = src;
     renamed.push({ from: path, to });
   }

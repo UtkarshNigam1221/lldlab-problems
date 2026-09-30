@@ -21,7 +21,9 @@ const JS: { re: RegExp; what: string }[] = [
 const PY_BANNED = new Set(['js', 'pyodide', 'urllib', 'http', 'socket', 'subprocess']);
 const PY_IMPORT = /^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+([A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*))/gm;
 
-const GO_BANNED = /^(net|os\/exec|syscall|unsafe)(\/|$)/;
+const GO_BANNED = /^(net|os\/exec|os\/signal|plugin|syscall|unsafe)(\/|$)/;
+// Pure parsing packages the runtime allows under net/ (packages/yaegi-runtime/runner.go allowedUnderBlocked).
+const GO_ALLOWED = new Set(['net/url', 'net/netip']);
 const GO_IMPORT_BLOCK = /\bimport\s*\(([\s\S]*?)\)/g;
 const GO_IMPORT_LINE = /\bimport\s+(?:[\w.]+\s+)?"([^"]+)"/g;
 
@@ -45,7 +47,7 @@ function goFindings(code: string): string[] {
   const paths: string[] = [];
   for (const m of code.matchAll(GO_IMPORT_BLOCK)) for (const q of m[1].matchAll(/"([^"]+)"/g)) paths.push(q[1]);
   for (const m of code.matchAll(GO_IMPORT_LINE)) paths.push(m[1]);
-  return [...new Set(paths.filter((p) => GO_BANNED.test(p)).map((p) => `imports ${p}`))];
+  return [...new Set(paths.filter((p) => GO_BANNED.test(p) && !GO_ALLOWED.has(p)).map((p) => `imports ${p}`))];
 }
 
 const FIND: Record<Language, (code: string) => string[]> = { javascript: jsFindings, typescript: jsFindings, python: pyFindings, go: goFindings };

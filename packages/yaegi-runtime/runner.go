@@ -42,7 +42,13 @@ const modulePath = "app"
 
 var blockedPackages = []string{"net", "os/exec", "os/signal", "plugin", "syscall", "unsafe"}
 
+// allowedUnderBlocked are pure parsing packages under a blocked prefix; they never open connections.
+var allowedUnderBlocked = map[string]bool{"net/url": true, "net/netip": true}
+
 func isBlocked(pkg string) bool {
+	if allowedUnderBlocked[pkg] {
+		return false
+	}
 	for _, b := range blockedPackages {
 		if pkg == b || strings.HasPrefix(pkg, b+"/") {
 			return true
