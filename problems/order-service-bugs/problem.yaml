@@ -1,0 +1,17 @@
+slug: order-service-bugs
+title: Order Service Bugs
+summary: A small order service with a repository, a service layer and an HTTP-like router has three bugs. Find and fix them.
+difficulty: easy
+kind: debug
+patterns: [repository]
+tags: [layered-architecture]
+authors: [UtkarshNigam1221]
+timeLimitMs: 5000
+languages: [python]
+entry:
+  python: orders/router.py
+readonly:
+  - orders/models.py
+stages:
+  - id: fix
+    title: Fix the reported bugs
