@@ -12,6 +12,10 @@ npm ci
 npm run problems -- test parking-lot
 ```
 
+## Publishing
+
+After **Checks** passes on a push to `main` (or when run by hand on `main`), `.github/workflows/publish.yml` validates and builds all problems, uploads `v/<version>/<slug>.json` (immutable, cached for a year) and then `index.json` (cached for 60 s) to the problems bucket, and checks that the live index matches. If `main` has already moved on, the older run skips and the newer commit publishes. Nothing is ever deleted, so users mid-problem keep their version. It needs the repo variables `PROBLEMS_URL`, `PROBLEMS_BUCKET` and `PROBLEMS_PUBLISH_ROLE_ARN` (outputs of `ProblemsStack` in `lldlab-frontend/infra`).
+
 ## Releasing
 
 Two packages publish to npm from this repo. Each has its own tag and workflow, and publishes through npm Trusted Publishing (GitHub OIDC, with provenance), so no npm token is stored anywhere.
