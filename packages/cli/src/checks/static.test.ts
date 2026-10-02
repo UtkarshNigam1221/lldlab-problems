@@ -8,7 +8,8 @@ const messages = (issues: { message: string }[]) => issues.map((i) => i.message)
 
 describe('static checks', () => {
   it('pass on the good fixture', () => {
-    expect(staticChecks(good())).toEqual([]);
+    // Warnings (hello's part-2 test imports shout.js, not the entry) don't fail validation.
+    expect(staticChecks(good()).filter((i) => i.level !== 'warning')).toEqual([]);
   });
 
   it('slug must match the folder', () => {

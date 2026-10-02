@@ -1,10 +1,11 @@
 import type { Issue } from '../issues';
 import type { ProblemSource } from '../load';
 import { checkBanned } from './banned';
+import { checkDesign } from './design';
 import { checkPaths } from './paths';
 import { checkStructure } from './structure';
 
-export { checkBanned, checkPaths, checkStructure };
+export { checkBanned, checkDesign, checkPaths, checkStructure };
 
 export const MAX_FILES_PER_STAGE = 40;
 
@@ -21,5 +22,5 @@ export function checkFileCounts(src: ProblemSource): Issue[] {
 }
 
 export function staticChecks(src: ProblemSource): Issue[] {
-  return [...checkStructure(src), ...checkPaths(src), ...checkBanned(src), ...checkFileCounts(src)];
+  return [...checkStructure(src), ...checkPaths(src), ...checkBanned(src), ...checkFileCounts(src), ...checkDesign(src)];
 }
