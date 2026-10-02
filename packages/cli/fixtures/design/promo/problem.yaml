@@ -1,0 +1,22 @@
+slug: promo
+title: Promo
+summary: A tiny checkout whose promotions you design.
+difficulty: easy
+kind: implement
+domain: Pricing · Checkout
+patterns: [strategy]
+authors: [UtkarshNigam1221]
+timeLimitMs: 5000
+languages: [javascript]
+entry:
+  javascript: checkout.js
+stages:
+  - id: codes
+    title: Promo codes
+    checks:
+      - forbid: "SAVE10|FLAT100"
+        in: [checkout.js]
+        message: Checkout shouldn't know specific promotions
+  - id: stack
+    title: Stacking
+    frozen: [checkout.js]

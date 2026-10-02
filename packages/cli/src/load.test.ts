@@ -55,6 +55,36 @@ describe('loadProblem', () => {
     const { issues } = loadProblem(fx('good'));
     expect(issues).toEqual([{ problem: 'good', message: 'problem.yaml is missing' }]);
   });
+  it('loads the brief, domain, review, frozen files and checks', () => {
+    const { source, issues } = loadProblem(fx('design/promo'));
+    expect(issues).toEqual([]);
+    expect(source!.meta.domain).toBe('Pricing · Checkout');
+    expect(source!.meta.brief).toMatch(/^# Ticket: promo codes at checkout/);
+    expect(source!.review).toMatch(/^# Design review/);
+    expect(source!.stages[0].checks).toEqual([{ forbid: 'SAVE10|FLAT100', in: ['checkout.js'], message: "Checkout shouldn't know specific promotions" }]);
+    expect(source!.stages[0].frozen).toEqual([]);
+    expect(source!.stages[1].frozen).toEqual(['checkout.js']);
+    expect(source!.stages[1].checks).toEqual([]);
+    expect(source!.extraFolders).toEqual([]);
+  });
+
+  it('leaves the new fields out for problems that do not use them', () => {
+    const { source } = loadProblem(fx('good/hello'));
+    expect(source!.meta.domain).toBeUndefined();
+    expect(source!.meta.brief).toBeUndefined();
+    expect(source!.review).toBeUndefined();
+    expect(source!.stages.map((s) => [s.frozen, s.checks])).toEqual([[[], []], [[], []]]);
+  });
+
+  it('accepts the refactor kind and rejects unknown check fields', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'promo-'));
+    cpSync(fx('design/promo'), dir, { recursive: true });
+    const yaml = (extra: string) => `slug: promo\ntitle: P\nsummary: s\ndifficulty: easy\nkind: refactor\npatterns: []\nauthors: [a]\ntimeLimitMs: 5000\nlanguages: [javascript]\nentry: { javascript: checkout.js }\nstages:\n  - id: codes\n    title: C\n${extra}  - id: stack\n    title: S\n`;
+    writeFileSync(path.join(dir, 'problem.yaml'), yaml(''));
+    expect(loadProblem(dir).issues).toEqual([]);
+    writeFileSync(path.join(dir, 'problem.yaml'), yaml('    checks:\n      - { forbid: x, in: [a.js], message: m, extra: 1 }\n'));
+    expect(loadProblem(dir).issues.map((i) => i.message)).toContainEqual(expect.stringMatching(/stages\/0\/checks\/0: must NOT have additional properties/));
+  });
 });
 
 describe('listProblemDirs', () => {

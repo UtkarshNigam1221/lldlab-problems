@@ -2,7 +2,14 @@ import { globToRegExp } from './glob';
 import type { Files, Language, RunInput, StageTests } from './types';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type Kind = 'implement' | 'debug';
+export type Kind = 'implement' | 'refactor' | 'debug';
+
+/** A design check: `forbid` must not match the contents of any workspace file matching `in`. */
+export interface StageCheck {
+  forbid: string;
+  in: string[];
+  message: string;
+}
 
 export interface ProblemMeta {
   title: string;
@@ -16,6 +23,10 @@ export interface ProblemMeta {
   languages: Language[];
   entry: Partial<Record<Language, string>>;
   readonly: string[];
+  /** Shown instead of `patterns` until the problem is solved, e.g. "Pricing · Checkout". */
+  domain?: string;
+  /** The ticket: the problem folder's README.md. */
+  brief?: string;
 }
 
 export interface CompiledLanguageStage {
@@ -29,6 +40,9 @@ export interface CompiledStage {
   readme: string;
   hints?: string;
   languages: Partial<Record<Language, CompiledLanguageStage>>;
+  /** Workspace globs that become read-only from this stage on. */
+  frozen?: string[];
+  checks?: StageCheck[];
 }
 
 export interface CompiledProblem {
@@ -50,6 +64,7 @@ export interface IndexEntry {
   tags: string[];
   languages: Language[];
   stages: { id: string; title: string }[];
+  domain?: string;
 }
 
 export interface ProblemIndex {
