@@ -60,9 +60,13 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       else if (sol.results.some((r) => !r.passed)) message = `${where}: the solution fails ${describeFailures(sol)}`;
       else if (ms > limit) message = `${where}: the solution took ${ms} ms; the limit is ${limit} ms (half of timeLimitMs)`;
       if (!message) {
-        // The reference's snapshot of a frozen file is the previous part's reference solution; earlier snapshots win.
+        // As in the browser's unlockStage: the workspace at unlock is the previous part's reference solution plus this
+        // part's new starter files (the solution's own file wins on a clash). Earlier snapshots win.
         const solution = s.languages[lang]!.solution;
-        if (i > 0) snapshots = { ...frozenSnapshot(compiled, i, src.stages[i - 1].languages[lang]!.solution), ...snapshots };
+        if (i > 0) {
+          const atUnlock = { ...s.languages[lang]!.starter, ...src.stages[i - 1].languages[lang]!.solution };
+          snapshots = { ...frozenSnapshot(compiled, i, atUnlock), ...snapshots };
+        }
         const failed = evaluateChecks(solution, checksThrough(compiled, solution, i, snapshots)).find((c) => !c.passed);
         if (failed) message = `${where}: the solution fails design check "${failed.name}": ${failed.message}`;
       }

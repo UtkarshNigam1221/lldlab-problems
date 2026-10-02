@@ -89,6 +89,14 @@ describe('runTests', () => {
     expect(FakeWorker.created).toHaveLength(2);
   });
 
+  it('a run that times out keeps the design check results the worker sent with "started"', async () => {
+    const checks = [{ name: 'n', stage: 's', passed: true }];
+    setWorkerFactory(() => new FakeWorker((w) => w.emit({ type: 'started', checks }, 0)));
+    const p = runTests('go', INPUT, { timeoutMs: 500 });
+    await vi.runAllTimersAsync();
+    expect(await p).toEqual({ results: [], stdout: '', error: 'Timed out after 500 ms', checks });
+  });
+
   it('reuses the Python worker (runtime is expensive to load)', async () => {
     setWorkerFactory(() => new FakeWorker((w) => { w.emit({ type: 'started' }, 0); w.emit({ type: 'done', output: OK }, 1); }));
     for (let i = 0; i < 2; i++) {

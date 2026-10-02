@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checksThrough, evaluateChecks, frozenSnapshot, isReadonlyAt, withChecks } from './checks';
+import { checksThrough, evaluateChecks, frozenSnapshot, isReadonlyAt, checkedBy, withChecks } from './checks';
 import { runInputFor, unlockStage, type CompiledProblem } from './problem';
 
 const p: CompiledProblem = {
@@ -123,5 +123,23 @@ describe('withChecks', () => {
   it('leaves the output alone when the input has no checks', () => {
     const out = { results: [], stdout: '' };
     expect(withChecks({ files: {}, tests: [] }, out)).toBe(out);
+  });
+});
+
+describe('checkedBy', () => {
+  it('evaluates checks before any user code runs, so patched globals cannot change the results', () => {
+    const attach = checkedBy({ files: { 'a.js': 'SAVE10' }, tests: [], checks: [{ kind: 'forbid', stage: 's', name: 'n', pattern: 'SAVE10', in: ['*.js'] }] });
+    const exec = RegExp.prototype.exec;
+    RegExp.prototype.exec = () => null; // what user code in the same realm could do
+    try {
+      expect(attach({ results: [], stdout: '' }).checks).toEqual([{ name: 'n', stage: 's', passed: false, message: 'a.js:1 matches /SAVE10/' }]);
+    } finally {
+      RegExp.prototype.exec = exec;
+    }
+  });
+
+  it('attaches nothing when the input has no checks', () => {
+    const out = { results: [], stdout: '' };
+    expect(checkedBy({ files: {}, tests: [] })(out)).toBe(out);
   });
 });

@@ -1,4 +1,4 @@
-import type { Language, RunInput, RunOutput } from './types';
+import type { CheckResult, Language, RunInput, RunOutput } from './types';
 
 export interface WorkerLike {
   postMessage(msg: unknown): void;
@@ -8,7 +8,7 @@ export interface WorkerLike {
 }
 
 type WorkerMessage =
-  | { type: 'started' }
+  | { type: 'started'; checks?: CheckResult[] }
   | { type: 'done'; output: RunOutput }
   | { type: 'ready' }
   | { type: 'loadFailed'; error: string }
@@ -96,14 +96,18 @@ export function runTests(
   if (problem !== undefined) slot.problem = problem;
   return new Promise((resolve) => {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Sent with "started", so a run that times out or crashes still reports its design checks.
+    let checks: CheckResult[] | undefined;
     const finish = (out: RunOutput, dropWorker: boolean) => {
       clearTimeout(timer);
+      if (checks && !out.checks) out = { ...out, checks };
       slot.listeners.delete(listener);
       if (dropWorker || FRESH_PER_RUN.has(lang)) drop(lang, slot);
       resolve(out);
     };
     const listener: Listener = (m) => {
       if (m.type === 'started') {
+        checks = m.checks;
         // The limit covers the code, not the Pyodide/Yaegi download.
         clearTimeout(timer);
         timer = setTimeout(() => finish({ results: [], stdout: '', error: `Timed out after ${timeoutMs} ms` }, true), timeoutMs);

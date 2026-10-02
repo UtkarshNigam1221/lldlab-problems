@@ -64,4 +64,13 @@ describe('runChecks', () => {
     const { issues } = await runChecks(src, runtimes);
     expect(issues.map((i) => i.message)).toContain('javascript stage stack: the solution fails design check "checkout.js unchanged since part 2": checkout.js changed since the part unlocked');
   });
+
+  it('snapshots a frozen file that the same part\'s starter adds', async () => {
+    const src = load('design/promo');
+    src.stages[1].languages.javascript!.starter['rate.js'] = 'export const RATE = 1;\n';
+    src.stages[1].languages.javascript!.solution['rate.js'] = 'export const RATE = 1;\n';
+    src.stages[1].frozen = ['checkout.js', 'rate.js'];
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues).toEqual([]);
+  });
 });

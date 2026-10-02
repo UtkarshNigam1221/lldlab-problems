@@ -67,7 +67,17 @@ export function evaluateChecks(files: Files, checks: DesignCheck[]): CheckResult
   return checks.map((c) => (c.kind === 'forbid' ? forbid(files, c) : unchanged(files, c)));
 }
 
+/**
+ * Evaluates the input's design checks now and returns a function that attaches the results to an output. Call it
+ * before running any user code: code in the same realm could patch RegExp or Function and change the results.
+ */
+export function checkedBy(input: RunInput): ((output: RunOutput) => RunOutput) & { results?: CheckResult[] } {
+  if (!input.checks) return (output: RunOutput) => output;
+  const checks = evaluateChecks(input.files, input.checks);
+  return Object.assign((output: RunOutput) => ({ ...output, checks }), { results: checks });
+}
+
 /** The output with the input's design check results added (unchanged when the input has none). */
 export function withChecks(input: RunInput, output: RunOutput): RunOutput {
-  return input.checks ? { ...output, checks: evaluateChecks(input.files, input.checks) } : output;
+  return checkedBy(input)(output);
 }

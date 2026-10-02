@@ -1,5 +1,5 @@
 import { PYODIDE_INDEX_URL, WASM_EXEC_URL, YAEGI_WASM_URL } from './config';
-import { withChecks } from './checks';
+import { checkedBy } from './checks';
 import { executeGo, type YaegiRun } from './go';
 import { executeJs } from './js';
 import { lockdown } from './lockdown';
@@ -99,9 +99,10 @@ ctx.onmessage = async (e) => {
     return;
   }
   const { lang, input } = e.data;
-  // Checks need no runtime: they're reported even when Pyodide or Yaegi fails to load. Running them here, inside
-  // the worker, keeps a pathological pattern bounded by runTests' start timeout instead of freezing the page.
-  const checked = (output: RunOutput) => withChecks(input, output);
+  // Checks first, before the runtime loads and before any user code: they need no runtime (so they're reported when
+  // Pyodide or Yaegi fails to load), user code can't tamper with them, and a slow pattern is bounded by runTests'
+  // start timeout (no "started" is posted until they finish) instead of the user's time limit.
+  const checked = checkedBy(input);
   let run: Runner;
   try {
     run = await runnerFor(lang);
@@ -115,7 +116,7 @@ ctx.onmessage = async (e) => {
     ctx.postMessage({ type: 'done', output: checked(output) });
     return;
   }
-  ctx.postMessage({ type: 'started' });
+  ctx.postMessage({ type: 'started', checks: checked.results });
   let output: RunOutput;
   try {
     output = await run(input);
