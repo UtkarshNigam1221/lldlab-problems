@@ -58,4 +58,16 @@ describe('checkDesign', () => {
     expect(errors(src)).toEqual([]);
     expect(warnings(src)).toEqual(['javascript/stages/1-codes/tests/checkout.test.js imports promotions; tests should only use the entry point checkout.js']);
   });
+
+  it.each(['(\\w+\\s?)+$', '((a+))+$', '(a|aa)+$', '(.*a){12}', '(a+)+$', '(?:x*y)*'])('rejects the catastrophic pattern %s', (pattern) => {
+    const src = promo();
+    src.stages[0].checks[0].forbid = pattern;
+    expect(errors(src)).toEqual([expect.stringMatching(/nests quantifiers; it can take exponential time$/)]);
+  });
+
+  it.each(['SAVE10|FLAT100', '(SAVE10|FLAT100)', '\\(a+\\)+', '[(]x+', 'a+b*', '(abc){2}'])('accepts the safe pattern %s', (pattern) => {
+    const src = promo();
+    src.stages[0].checks[0].forbid = pattern;
+    expect(errors(src)).toEqual([]);
+  });
 });

@@ -3,8 +3,42 @@ import { globToRegExp, type Files, type Language } from 'lldlab-runner';
 import type { Issue } from '../issues';
 import type { ProblemSource } from '../load';
 
-// A group containing a quantifier, itself quantified: (a+)+, (a*)*, (a+){2,}. The classic catastrophic-backtracking shape.
-const NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*}]\)\s*[+*{]/;
+/**
+ * True for a repeated group (`+`, `*` or `{…}` after it) whose body contains a quantifier or an alternation at any
+ * depth: (a+)+, ((a+))+, (a|aa)+, (.*a){12}. These are the shapes that backtrack exponentially. Escapes and
+ * character classes are skipped, so \\(a+\\)+ and [(]x+ are fine.
+ */
+export function nestsQuantifiers(re: string): boolean {
+  const groups: { risky: boolean }[] = [];
+  const markParent = () => {
+    if (groups.length) groups[groups.length - 1].risky = true;
+  };
+  for (let i = 0; i < re.length; i++) {
+    const c = re[i];
+    if (c === '\\') {
+      i++;
+    } else if (c === '[') {
+      for (i++; i < re.length && re[i] !== ']'; i++) if (re[i] === '\\') i++;
+    } else if (c === '(') {
+      groups.push({ risky: false });
+      if (re[i + 1] === '?') {
+        i += 2; // (?: (?= (?!
+        if (re[i] === '<' && re[i + 1] !== '=' && re[i + 1] !== '!') while (i < re.length && re[i] !== '>') i++; // (?<name>
+        else if (re[i] === '<') i++; // (?<= (?<!
+      }
+    } else if (c === ')') {
+      const g = groups.pop();
+      if (!g) continue;
+      const next = re[i + 1];
+      const repeated = next === '+' || next === '*' || next === '{';
+      if (repeated && g.risky) return true;
+      if (g.risky || repeated) markParent();
+    } else if (c === '|' || c === '+' || c === '*' || c === '?' || c === '{') {
+      markParent();
+    }
+  }
+  return false;
+}
 
 function starterThrough(src: ProblemSource, lang: Language, stage: number): Files {
   const out: Files = {};
@@ -47,7 +81,7 @@ export function checkDesign(src: ProblemSource): Issue[] {
         err(`${label}: invalid pattern: ${e instanceof Error ? e.message : String(e)}`);
         continue;
       }
-      if (NESTED_QUANTIFIER.test(c.forbid)) err(`${label}: pattern /${c.forbid}/ nests quantifiers; it can take exponential time`);
+      if (nestsQuantifiers(c.forbid)) err(`${label}: pattern /${c.forbid}/ nests quantifiers; it can take exponential time`);
       for (const lang of src.meta.languages) {
         const files = starterThrough(src, lang, i);
         for (const g of c.in) if (!matchesSome(g, files)) err(`${label}: in glob "${g}" matches no ${lang} starter file`);
