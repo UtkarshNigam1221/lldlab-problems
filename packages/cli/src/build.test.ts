@@ -1,9 +1,10 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { buildIndex, checkCompiledSize, checkSlugsKept, compileProblem, stable, writeBuild } from './build';
+import { buildIndex, checkCompiledSize, checkSlugsKept, compileProblem, compileReview, stable, writeBuild } from './build';
 import { loadProblem } from './load';
 
 const src = () => loadProblem(fileURLToPath(new URL('../fixtures/good/hello', import.meta.url))).source!;
@@ -75,5 +76,52 @@ describe('limits and permanence', () => {
   it('rejects removing a published slug', () => {
     const published = { generatedAt: '', problems: [{ slug: 'hello' }, { slug: 'gone' }] } as never;
     expect(checkSlugsKept(published, ['hello'])).toEqual([{ problem: 'gone', message: 'published problem "gone" was removed or renamed; slugs are permanent' }]);
+  });
+});
+
+const promo = () => loadProblem(fileURLToPath(new URL('../fixtures/design/promo', import.meta.url))).source!;
+
+describe('design fields', () => {
+  it('compiles brief, domain, frozen and checks', () => {
+    const p = compileProblem(promo());
+    expect(p.meta.domain).toBe('Pricing · Checkout');
+    expect(p.meta.brief).toMatch(/^# Ticket/);
+    expect(p.stages[0].checks).toEqual([{ forbid: 'SAVE10|FLAT100', in: ['checkout.js'], message: "Checkout shouldn't know specific promotions" }]);
+    expect(p.stages[0].frozen).toBeUndefined();
+    expect(p.stages[1].frozen).toEqual(['checkout.js']);
+    expect(p.stages[1].checks).toBeUndefined();
+    expect(JSON.stringify(p)).not.toContain('Design review');
+  });
+
+  it('keeps the version of a problem that has no review', () => {
+    const src = loadProblem(fileURLToPath(new URL('../fixtures/good/hello', import.meta.url))).source!;
+    const body = { slug: src.slug, meta: src.meta, stages: compileProblem(src).stages };
+    expect(compileProblem(src).version).toBe(createHash('sha256').update(JSON.stringify(stable(body))).digest('hex').slice(0, 12));
+  });
+
+  it('puts the review in the version, so editing it publishes a new version', () => {
+    const src = promo();
+    const a = compileProblem(src).version;
+    src.review = '# Design review\n\nChanged.';
+    expect(compileProblem(src).version).not.toBe(a);
+  });
+
+  it('writes the review next to the problem and the domain into the index', () => {
+    const src = promo();
+    const p = compileProblem(src);
+    const out = mkdtempSync(path.join(os.tmpdir(), 'build-'));
+    const written = writeBuild(out, [p], new Date(0), [compileReview(src, p.version)!]);
+    expect(written).toContain(`v/${p.version}/promo.review.json`);
+    expect(JSON.parse(readFileSync(path.join(out, `v/${p.version}/promo.review.json`), 'utf8'))).toEqual({ slug: 'promo', version: p.version, markdown: src.review });
+    expect(buildIndex([p]).problems[0].domain).toBe('Pricing · Checkout');
+  });
+
+  it('writes no review file for a problem without review.md', () => {
+    const src = loadProblem(fileURLToPath(new URL('../fixtures/good/hello', import.meta.url))).source!;
+    const p = compileProblem(src);
+    expect(compileReview(src, p.version)).toBeUndefined();
+    const out = mkdtempSync(path.join(os.tmpdir(), 'build-'));
+    writeBuild(out, [p], new Date(0), []);
+    expect(existsSync(path.join(out, `v/${p.version}/hello.review.json`))).toBe(false);
   });
 });

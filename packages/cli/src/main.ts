@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { lockdown, type Language } from 'lldlab-runner';
-import { checkCompiledSize, checkSlugsKept, compileProblem, fetchPublishedIndex, writeBuild } from './build';
+import { checkCompiledSize, checkSlugsKept, compileProblem, compileReview, fetchPublishedIndex, writeBuild } from './build';
 import { staticChecks } from './checks/static';
 import { runChecks } from './checks/run';
 import type { Issue } from './issues';
@@ -75,7 +75,9 @@ export async function main(argv: string[], io: { log(s: string): void } = consol
   if (issues.length) return 1;
 
   if (command === 'build') {
-    const written = writeBuild(values.out!, sources.map(compileProblem));
+    const compiled = sources.map((s) => ({ s, p: compileProblem(s) }));
+    const reviews = compiled.flatMap(({ s, p }) => compileReview(s, p.version) ?? []);
+    const written = writeBuild(values.out!, compiled.map(({ p }) => p), new Date(), reviews);
     io.log(`wrote ${written.length} files to ${values.out}`);
   }
   return 0;
