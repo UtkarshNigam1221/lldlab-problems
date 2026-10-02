@@ -10,3 +10,7 @@ const out = await runTests('go', runInputFor(problem, 'go', workspaceFiles, stag
 ```
 
 `runTests` creates `new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })` by default; your bundler must emit `dist/worker.js` as a worker asset. To serve the worker yourself, bundle `lldlab-runner/worker` into a same-origin file (for example `esbuild` an entry containing `import 'lldlab-runner/worker';` to `public/runner/worker.js`) and pass `() => new Worker('/runner/worker.js', { type: 'module' })` to `setWorkerFactory`. Don't rely on a bundler's `new Worker(new URL(...))` if it starts the worker from a `blob:` URL (Turbopack does): a `blob:` worker inherits the page's CSP, so the worker CSP below would not apply. After a runtime loads, the worker removes `fetch`, `XMLHttpRequest`, `WebSocket` and other network globals. Serve the worker with a Content-Security-Policy that limits `connect-src` and `script-src` to `https://cdn.jsdelivr.net`, since `import()` can't be removed from inside the worker.
+
+## Design checks
+
+`runInputFor(problem, lang, workspace, stage, snapshots)` includes the design checks that apply at `stage`; every run returns their results in `output.checks`, even when the runtime fails to load. `unlockStage` returns `snapshots` for the files the new part freezes; keep the first snapshot of each path and pass them to every later run. `isReadonlyAt(problem, path, stage)` adds frozen files to the problem's `readonly` globs.

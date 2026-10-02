@@ -13,7 +13,8 @@
     "title": { "type": "string", "minLength": 1, "maxLength": 200 },
     "summary": { "type": "string", "minLength": 1, "maxLength": 200 },
     "difficulty": { "enum": ["easy", "medium", "hard"] },
-    "kind": { "enum": ["implement", "debug"] },
+    "kind": { "enum": ["implement", "refactor", "debug"] },
+    "domain": { "type": "string", "minLength": 1, "maxLength": 60 },
     "patterns": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
     "tags": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
     "authors": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$" } },
@@ -35,7 +36,22 @@
         "required": ["id", "title"],
         "properties": {
           "id": { "$ref": "#/definitions/id" },
-          "title": { "type": "string", "minLength": 1, "maxLength": 100 }
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "frozen": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "checks": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["forbid", "in", "message"],
+              "properties": {
+                "forbid": { "type": "string", "minLength": 1, "maxLength": 300 },
+                "in": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+                "message": { "type": "string", "minLength": 1, "maxLength": 200 }
+              }
+            }
+          }
         }
       }
     }

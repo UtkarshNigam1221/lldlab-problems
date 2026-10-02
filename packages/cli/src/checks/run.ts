@@ -1,4 +1,5 @@
-import type { Files, Language, RunOutput, StageTests } from 'lldlab-runner';
+import { checksThrough, evaluateChecks, frozenSnapshot, type Files, type Language, type RunOutput, type StageTests } from 'lldlab-runner';
+import { compileProblem } from '../build';
 import type { Issue } from '../issues';
 import type { ProblemSource } from '../load';
 import type { Execute } from '../runtimes';
@@ -36,6 +37,7 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
   const reports: RunReport[] = [];
   const fail = (message: string) => issues.push({ problem: src.slug, message });
   const limit = Math.floor(src.meta.timeLimitMs / 2);
+  const compiled = compileProblem(src);
 
   for (const lang of src.meta.languages) {
     const exec = runtimes[lang];
@@ -43,6 +45,7 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       fail(`${lang}: no runtime loaded`);
       continue;
     }
+    let snapshots: Files = {};
     for (let i = 0; i < src.stages.length; i++) {
       const s = src.stages[i];
       const tests = testsThrough(src, lang, i);
@@ -56,18 +59,35 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       else if (!sol.results.length) message = `${where}: no tests ran`;
       else if (sol.results.some((r) => !r.passed)) message = `${where}: the solution fails ${describeFailures(sol)}`;
       else if (ms > limit) message = `${where}: the solution took ${ms} ms; the limit is ${limit} ms (half of timeLimitMs)`;
+      if (!message) {
+        // As in the browser's unlockStage: the workspace at unlock is the previous part's reference solution plus this
+        // part's new starter files (the solution's own file wins on a clash). Earlier snapshots win.
+        const solution = s.languages[lang]!.solution;
+        if (i > 0) {
+          const atUnlock = { ...s.languages[lang]!.starter, ...src.stages[i - 1].languages[lang]!.solution };
+          snapshots = { ...frozenSnapshot(compiled, i, atUnlock), ...snapshots };
+        }
+        const failed = evaluateChecks(solution, checksThrough(compiled, solution, i, snapshots)).find((c) => !c.passed);
+        if (failed) message = `${where}: the solution fails design check "${failed.name}": ${failed.message}`;
+      }
       if (message) fail(message);
       reports.push({ lang, stage: s.id, kind: 'solution', ok: !message, message, ms, output: sol });
 
       start = performance.now();
-      const st = await exec({ files: starterThrough(src, lang, i), tests });
+      const starter = starterThrough(src, lang, i);
+      const st = await exec({ files: starter, tests });
       ms = Math.round(performance.now() - start);
       message = undefined;
-      // Stage 1 and every debug stage must run, so users see failing tests rather than a compile error.
-      const mustRun = i === 0 || src.meta.kind === 'debug';
+      // Stage 1 and every debug or refactor stage must run, so users see failing tests or checks, not a compile error.
+      const mustRun = i === 0 || src.meta.kind === 'debug' || src.meta.kind === 'refactor';
+      const failsTest = st.results.some((r) => r.stage === s.id && !r.passed);
       if (st.error) {
         if (mustRun) message = `${where}: the starter must run without errors: ${st.error}`;
-      } else if (!st.results.some((r) => r.stage === s.id && !r.passed)) {
+      } else if (src.meta.kind === 'refactor') {
+        // A refactor starter works (its tests may pass); what it lacks is the design, so a check must fail instead.
+        const failsCheck = evaluateChecks(starter, checksThrough(compiled, starter, i, starter)).some((c) => c.stage === s.id && !c.passed);
+        if (!failsTest && !failsCheck) message = `${where}: the starter passes every ${s.id} test and design check, so the part asks for nothing`;
+      } else if (!failsTest) {
         message = `${where}: the starter passes every ${s.id} test, so the tests don't check the requirement`;
       }
       if (message) fail(message);

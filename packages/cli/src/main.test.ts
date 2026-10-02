@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,5 +61,13 @@ describe('main', () => {
     const { io, lines } = capture();
     expect(await main(['frobnicate'], io)).toBe(2);
     expect(lines[0]).toMatch(/^usage: /);
+  });
+  it('prints warnings without failing', async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'warn-'));
+    cpSync(fileURLToPath(new URL('../fixtures/design/promo', import.meta.url)), path.join(root, 'promo'), { recursive: true });
+    writeFileSync(path.join(root, 'promo/javascript/stages/1-codes/tests/checkout.test.js'), "import { price } from '../promotions';\ntest('x', () => {});");
+    const lines: string[] = [];
+    expect(await main(['validate', '--root', root], { log: (s) => lines.push(s) })).toBe(0);
+    expect(lines).toContain('! promo: javascript/stages/1-codes/tests/checkout.test.js imports promotions; tests should only use the entry point checkout.js');
   });
 });

@@ -1,8 +1,16 @@
+import { checksThrough, frozenSnapshot } from './checks';
 import { globToRegExp } from './glob';
 import type { Files, Language, RunInput, StageTests } from './types';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type Kind = 'implement' | 'debug';
+export type Kind = 'implement' | 'refactor' | 'debug';
+
+/** A design check: `forbid` must not match the contents of any workspace file matching `in`. */
+export interface StageCheck {
+  forbid: string;
+  in: string[];
+  message: string;
+}
 
 export interface ProblemMeta {
   title: string;
@@ -16,6 +24,10 @@ export interface ProblemMeta {
   languages: Language[];
   entry: Partial<Record<Language, string>>;
   readonly: string[];
+  /** Shown instead of `patterns` until the problem is solved, e.g. "Pricing · Checkout". */
+  domain?: string;
+  /** The ticket: the problem folder's README.md. */
+  brief?: string;
 }
 
 export interface CompiledLanguageStage {
@@ -29,6 +41,9 @@ export interface CompiledStage {
   readme: string;
   hints?: string;
   languages: Partial<Record<Language, CompiledLanguageStage>>;
+  /** Workspace globs that become read-only from this stage on. */
+  frozen?: string[];
+  checks?: StageCheck[];
 }
 
 export interface CompiledProblem {
@@ -50,6 +65,7 @@ export interface IndexEntry {
   tags: string[];
   languages: Language[];
   stages: { id: string; title: string }[];
+  domain?: string;
 }
 
 export interface ProblemIndex {
@@ -77,9 +93,16 @@ export function testsThrough(p: CompiledProblem, lang: Language, stage: number):
 
 /**
  * Add stage `stage`'s starter files to the user's workspace. A path the user already has keeps their file;
- * the new one is added as `<path>.part<stage+1>` (or `-2`, `-3`, … if that is taken too).
+ * the new one is added as `<path>.part<stage+1>` (or `-2`, `-3`, … if that is taken too). `snapshots` holds the
+ * files this stage freezes, as they are once it unlocks; callers keep an existing snapshot for a path rather than
+ * replacing it.
  */
-export function unlockStage(p: CompiledProblem, lang: Language, workspace: Files, stage: number): { files: Files; renamed: { from: string; to: string }[] } {
+export function unlockStage(
+  p: CompiledProblem,
+  lang: Language,
+  workspace: Files,
+  stage: number,
+): { files: Files; renamed: { from: string; to: string }[]; snapshots: Files } {
   const files: Files = { ...workspace };
   const renamed: { from: string; to: string }[] = [];
   // Own keys only: `in` would treat paths like "constructor" as already present.
@@ -94,11 +117,11 @@ export function unlockStage(p: CompiledProblem, lang: Language, workspace: Files
     files[to] = src;
     renamed.push({ from: path, to });
   }
-  return { files, renamed };
+  return { files, renamed, snapshots: frozenSnapshot(p, stage, files) };
 }
 
-export function runInputFor(p: CompiledProblem, lang: Language, workspace: Files, stage: number): RunInput {
-  return { files: workspace, tests: testsThrough(p, lang, stage) };
+export function runInputFor(p: CompiledProblem, lang: Language, workspace: Files, stage: number, snapshots: Files = {}): RunInput {
+  return { files: workspace, tests: testsThrough(p, lang, stage), checks: checksThrough(p, workspace, stage, snapshots) };
 }
 
 export function isReadonly(meta: ProblemMeta, path: string): boolean {

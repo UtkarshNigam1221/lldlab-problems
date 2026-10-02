@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { lockdown, type Language } from 'lldlab-runner';
-import { checkCompiledSize, checkSlugsKept, compileProblem, fetchPublishedIndex, writeBuild } from './build';
+import { checkCompiledSize, checkSlugsKept, compileProblem, compileReview, fetchPublishedIndex, writeBuild } from './build';
 import { staticChecks } from './checks/static';
 import { runChecks } from './checks/run';
 import type { Issue } from './issues';
@@ -54,7 +54,8 @@ export async function main(argv: string[], io: { log(s: string): void } = consol
     io.log('note: no --published index; skipped the slug check');
   }
 
-  if (command === 'test' && !issues.length) {
+  const isError = (i: Issue) => i.level !== 'warning';
+  if (command === 'test' && !issues.some(isError)) {
     const langs = [...new Set(sources.flatMap((s) => s.meta.languages))] as Language[];
     const runtimes = await loadRuntimes(langs, { yaegiDir: values['yaegi-dir'] || undefined });
     // Same as the browser worker: once the runtimes are loaded, contributed code gets no network globals.
@@ -67,15 +68,19 @@ export async function main(argv: string[], io: { log(s: string): void } = consol
       issues.push(...runIssues);
     }
   } else if (command !== 'test') {
-    const bad = new Set(issues.map((i) => i.problem));
+    const bad = new Set(issues.filter(isError).map((i) => i.problem));
     for (const src of sources) if (!bad.has(src.slug)) io.log(`✓ ${src.slug}`);
   }
 
-  for (const i of issues) io.log(`✗ ${i.problem}: ${i.message}`);
-  if (issues.length) return 1;
+  for (const i of issues.filter((i) => !isError(i))) io.log(`! ${i.problem}: ${i.message}`);
+  const errors = issues.filter(isError);
+  for (const i of errors) io.log(`✗ ${i.problem}: ${i.message}`);
+  if (errors.length) return 1;
 
   if (command === 'build') {
-    const written = writeBuild(values.out!, sources.map(compileProblem));
+    const compiled = sources.map((s) => ({ s, p: compileProblem(s) }));
+    const reviews = compiled.flatMap(({ s, p }) => compileReview(s, p.version) ?? []);
+    const written = writeBuild(values.out!, compiled.map(({ p }) => p), new Date(), reviews);
     io.log(`wrote ${written.length} files to ${values.out}`);
   }
   return 0;

@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node
 import path from 'node:path';
 import Ajv from 'ajv';
 import { parse } from 'yaml';
-import { LANGUAGES, type Files, type Language, type ProblemMeta } from 'lldlab-runner';
+import { LANGUAGES, type Files, type Language, type ProblemMeta, type StageCheck } from 'lldlab-runner';
 import type { Issue } from './issues';
 
 export interface SourceLanguageStage {
@@ -20,6 +20,8 @@ export interface SourceStage {
   readme: string;
   hints?: string;
   languages: Partial<Record<Language, SourceLanguageStage>>;
+  frozen: string[];
+  checks: StageCheck[];
 }
 
 export interface ProblemSource {
@@ -32,6 +34,8 @@ export interface ProblemSource {
   stages: SourceStage[];
   /** Folders that problem.yaml doesn't account for, relative to the problem folder. */
   extraFolders: string[];
+  /** review.md, when present. */
+  review?: string;
 }
 
 const schema = JSON.parse(readFileSync(new URL('../../../schema/problem.schema.json', import.meta.url), 'utf8'));
@@ -98,7 +102,7 @@ export function loadProblem(dir: string): { source?: ProblemSource; issues: Issu
   if (!validate(raw)) {
     return { issues: (validate.errors ?? []).map((e) => issue(`problem.yaml ${e.instancePath || '(root)'}: ${e.message}`)) };
   }
-  const y = raw as ProblemMeta & { slug: string; stages: { id: string; title: string }[] };
+  const y = raw as ProblemMeta & { slug: string; stages: { id: string; title: string; frozen?: string[]; checks?: StageCheck[] }[] };
   const meta: ProblemMeta = {
     title: y.title,
     summary: y.summary,
@@ -112,6 +116,9 @@ export function loadProblem(dir: string): { source?: ProblemSource; issues: Issu
     entry: y.entry,
     readonly: y.readonly ?? [],
   };
+  if (y.domain !== undefined) meta.domain = y.domain;
+  const brief = readText(path.join(dir, 'README.md'));
+  if (brief !== undefined) meta.brief = brief;
 
   const stages: SourceStage[] = y.stages.map((s, i) => {
     const folder = `${i + 1}-${s.id}`;
@@ -125,7 +132,7 @@ export function loadProblem(dir: string): { source?: ProblemSource; issues: Issu
         tests: readTree(path.join(base, 'tests')),
       };
     }
-    const stage: SourceStage = { id: s.id, title: s.title, folder, readme: readText(path.join(dir, 'stages', folder, 'README.md')) ?? '', languages };
+    const stage: SourceStage = { id: s.id, title: s.title, folder, readme: readText(path.join(dir, 'stages', folder, 'README.md')) ?? '', languages, frozen: s.frozen ?? [], checks: s.checks ?? [] };
     const hints = readText(path.join(dir, 'stages', folder, 'hints.md'));
     if (hints !== undefined) stage.hints = hints;
     return stage;
@@ -146,5 +153,6 @@ export function loadProblem(dir: string): { source?: ProblemSource; issues: Issu
     }
   }
 
-  return { source: { dir, slug, yamlSlug: y.slug, meta, stages, extraFolders }, issues: [] };
+  const review = readText(path.join(dir, 'review.md'));
+  return { source: { dir, slug, yamlSlug: y.slug, meta, stages, extraFolders, ...(review !== undefined && { review }) }, issues: [] };
 }

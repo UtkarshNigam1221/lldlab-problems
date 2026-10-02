@@ -45,4 +45,53 @@ describe('runChecks', () => {
     const { issues } = await runChecks(src, {});
     expect(issues.map((i) => i.message)).toEqual(['javascript: no runtime loaded']);
   });
+
+  it('passes the design fixture, checks included', async () => {
+    const { issues } = await runChecks(load('design/promo'), runtimes);
+    expect(issues).toEqual([]);
+  });
+
+  it('fails a solution that breaks a forbid check', async () => {
+    const src = load('design/promo');
+    src.stages[0].languages.javascript!.solution['checkout.js'] = "import { price } from './promotions';\nexport function checkout(s, c) { return c.includes('SAVE10') ? Math.floor(s * 0.9) : s; }";
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toContain(`javascript stage codes: the solution fails design check "Checkout shouldn't know specific promotions": checkout.js:2 matches /SAVE10|FLAT100/`);
+  });
+
+  it('fails a solution that edits a frozen file', async () => {
+    const src = load('design/promo');
+    src.stages[1].languages.javascript!.solution['checkout.js'] += '\n// tweak';
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toContain('javascript stage stack: the solution fails design check "checkout.js unchanged since part 2": checkout.js changed since the part unlocked');
+  });
+
+  it('snapshots a frozen file that the same part\'s starter adds', async () => {
+    const src = load('design/promo');
+    src.stages[1].languages.javascript!.starter['rate.js'] = 'export const RATE = 1;\n';
+    src.stages[1].languages.javascript!.solution['rate.js'] = 'export const RATE = 1;\n';
+    src.stages[1].frozen = ['checkout.js', 'rate.js'];
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues).toEqual([]);
+  });
+
+  it('a refactor starter may pass the tests when it fails a design check', async () => {
+    const src = load('design/promo');
+    src.meta.kind = 'refactor';
+    const js = src.stages[0].languages.javascript!;
+    js.starter['promotions.js'] = js.solution['promotions.js'];
+    js.starter['checkout.js'] = js.solution['checkout.js'] + '// SAVE10 is special-cased here\n';
+    src.stages.length = 1;
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues).toEqual([]);
+  });
+
+  it('a refactor starter that passes every test and check asks for nothing', async () => {
+    const src = load('design/promo');
+    src.meta.kind = 'refactor';
+    const js = src.stages[0].languages.javascript!;
+    js.starter['promotions.js'] = js.solution['promotions.js'];
+    src.stages.length = 1;
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toEqual(['javascript stage codes: the starter passes every codes test and design check, so the part asks for nothing']);
+  });
 });

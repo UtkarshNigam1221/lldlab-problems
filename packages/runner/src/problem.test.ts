@@ -31,7 +31,7 @@ describe('stage helpers', () => {
 
   it('unlock adds new starter files and keeps the user code', () => {
     const r = unlockStage(p, 'javascript', { 'a.js': 'MINE', 'types.js': 'T' }, 1);
-    expect(r).toEqual({ files: { 'a.js': 'MINE', 'types.js': 'T', 'b.js': 'B2' }, renamed: [] });
+    expect(r).toEqual({ files: { 'a.js': 'MINE', 'types.js': 'T', 'b.js': 'B2' }, renamed: [], snapshots: {} });
   });
 
   it('unlock never overwrites a file the user created at the same path', () => {
@@ -47,11 +47,11 @@ describe('stage helpers', () => {
   });
 
   it('unlock of a stage without starter files changes nothing', () => {
-    expect(unlockStage(p, 'javascript', { 'a.js': 'A' }, 2)).toEqual({ files: { 'a.js': 'A' }, renamed: [] });
+    expect(unlockStage(p, 'javascript', { 'a.js': 'A' }, 2)).toEqual({ files: { 'a.js': 'A' }, renamed: [], snapshots: {} });
   });
 
   it('builds a run input', () => {
-    expect(runInputFor(p, 'javascript', { 'a.js': 'X' }, 0)).toEqual({ files: { 'a.js': 'X' }, tests: [{ stage: 'one', files: { 'a.test.js': 'TA' } }] });
+    expect(runInputFor(p, 'javascript', { 'a.js': 'X' }, 0)).toEqual({ files: { 'a.js': 'X' }, tests: [{ stage: 'one', files: { 'a.test.js': 'TA' } }], checks: [] });
   });
 
   it('matches readonly globs', () => {

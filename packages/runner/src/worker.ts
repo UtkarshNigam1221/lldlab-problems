@@ -1,4 +1,5 @@
 import { PYODIDE_INDEX_URL, WASM_EXEC_URL, YAEGI_WASM_URL } from './config';
+import { checkedBy } from './checks';
 import { executeGo, type YaegiRun } from './go';
 import { executeJs } from './js';
 import { lockdown } from './lockdown';
@@ -98,6 +99,10 @@ ctx.onmessage = async (e) => {
     return;
   }
   const { lang, input } = e.data;
+  // Checks first, before the runtime loads and before any user code: they need no runtime (so they're reported when
+  // Pyodide or Yaegi fails to load), user code can't tamper with them, and a slow pattern is bounded by runTests'
+  // start timeout (no "started" is posted until they finish) instead of the user's time limit.
+  const checked = checkedBy(input);
   let run: Runner;
   try {
     run = await runnerFor(lang);
@@ -108,10 +113,10 @@ ctx.onmessage = async (e) => {
       error: `Failed to load ${lang} runtime: ${err instanceof Error ? err.message : String(err)}`,
       runtimeLoadFailed: true,
     };
-    ctx.postMessage({ type: 'done', output });
+    ctx.postMessage({ type: 'done', output: checked(output) });
     return;
   }
-  ctx.postMessage({ type: 'started' });
+  ctx.postMessage({ type: 'started', checks: checked.results });
   let output: RunOutput;
   try {
     output = await run(input);
@@ -119,5 +124,5 @@ ctx.onmessage = async (e) => {
     // Executors return errors as output; a throw means the runtime itself broke, so ask for a fresh worker.
     output = { results: [], stdout: '', error: err instanceof Error ? err.message : String(err), workerDead: true };
   }
-  ctx.postMessage({ type: 'done', output: { ...output, stdout: capOutput(output.stdout) } });
+  ctx.postMessage({ type: 'done', output: checked({ ...output, stdout: capOutput(output.stdout) }) });
 };
