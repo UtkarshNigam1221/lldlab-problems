@@ -10,4 +10,5 @@ export * from './go';
 export * from './config';
 export * from './glob';
 export * from './problem';
+export * from './checks';
 export * from './runTests';
