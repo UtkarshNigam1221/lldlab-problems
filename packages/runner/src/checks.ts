@@ -1,6 +1,6 @@
 import { globToRegExp } from './glob';
 import type { CompiledProblem } from './problem';
-import type { CheckResult, DesignCheck, Files } from './types';
+import type { CheckResult, DesignCheck, Files, RunInput, RunOutput } from './types';
 
 const matchesAny = (globs: string[], path: string) => globs.some((g) => globToRegExp(g).test(path));
 
@@ -65,4 +65,9 @@ function unchanged(files: Files, c: Extract<DesignCheck, { kind: 'unchanged' }>)
 /** Results in check order. Never throws: a bad pattern is a failed check. */
 export function evaluateChecks(files: Files, checks: DesignCheck[]): CheckResult[] {
   return checks.map((c) => (c.kind === 'forbid' ? forbid(files, c) : unchanged(files, c)));
+}
+
+/** The output with the input's design check results added (unchanged when the input has none). */
+export function withChecks(input: RunInput, output: RunOutput): RunOutput {
+  return input.checks ? { ...output, checks: evaluateChecks(input.files, input.checks) } : output;
 }

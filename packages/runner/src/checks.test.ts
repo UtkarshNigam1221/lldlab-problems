@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checksThrough, evaluateChecks, frozenSnapshot, isReadonlyAt } from './checks';
+import { checksThrough, evaluateChecks, frozenSnapshot, isReadonlyAt, withChecks } from './checks';
 import { runInputFor, unlockStage, type CompiledProblem } from './problem';
 
 const p: CompiledProblem = {
@@ -106,5 +106,22 @@ describe('runInputFor', () => {
   it('includes the design checks for the stage', () => {
     const input = runInputFor(p, 'javascript', { 'checkout/checkout.js': 'C' }, 1, { 'checkout/checkout.js': 'C' });
     expect(input.checks?.map((c) => c.kind)).toEqual(['forbid', 'unchanged']);
+  });
+});
+
+describe('withChecks', () => {
+  const checks = [{ kind: 'forbid' as const, stage: 's', name: 'n', pattern: 'X', in: ['*.js'] }];
+
+  it('adds check results to any output, including a runtime that failed to load', () => {
+    const failed = { results: [], stdout: '', error: 'Failed to load python runtime: offline', runtimeLoadFailed: true };
+    expect(withChecks({ files: { 'a.js': 'X' }, tests: [], checks }, failed)).toEqual({
+      ...failed,
+      checks: [{ name: 'n', stage: 's', passed: false, message: 'a.js:1 matches /X/' }],
+    });
+  });
+
+  it('leaves the output alone when the input has no checks', () => {
+    const out = { results: [], stdout: '' };
+    expect(withChecks({ files: {}, tests: [] }, out)).toBe(out);
   });
 });
