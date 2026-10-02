@@ -45,4 +45,23 @@ describe('runChecks', () => {
     const { issues } = await runChecks(src, {});
     expect(issues.map((i) => i.message)).toEqual(['javascript: no runtime loaded']);
   });
+
+  it('passes the design fixture, checks included', async () => {
+    const { issues } = await runChecks(load('design/promo'), runtimes);
+    expect(issues).toEqual([]);
+  });
+
+  it('fails a solution that breaks a forbid check', async () => {
+    const src = load('design/promo');
+    src.stages[0].languages.javascript!.solution['checkout.js'] = "import { price } from './promotions';\nexport function checkout(s, c) { return c.includes('SAVE10') ? Math.floor(s * 0.9) : s; }";
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toContain(`javascript stage codes: the solution fails design check "Checkout shouldn't know specific promotions": checkout.js:2 matches /SAVE10|FLAT100/`);
+  });
+
+  it('fails a solution that edits a frozen file', async () => {
+    const src = load('design/promo');
+    src.stages[1].languages.javascript!.solution['checkout.js'] += '\n// tweak';
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toContain('javascript stage stack: the solution fails design check "checkout.js unchanged since part 2": checkout.js changed since the part unlocked');
+  });
 });

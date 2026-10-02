@@ -1,4 +1,5 @@
-import type { Files, Language, RunOutput, StageTests } from 'lldlab-runner';
+import { checksThrough, evaluateChecks, frozenSnapshot, type Files, type Language, type RunOutput, type StageTests } from 'lldlab-runner';
+import { compileProblem } from '../build';
 import type { Issue } from '../issues';
 import type { ProblemSource } from '../load';
 import type { Execute } from '../runtimes';
@@ -36,6 +37,7 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
   const reports: RunReport[] = [];
   const fail = (message: string) => issues.push({ problem: src.slug, message });
   const limit = Math.floor(src.meta.timeLimitMs / 2);
+  const compiled = compileProblem(src);
 
   for (const lang of src.meta.languages) {
     const exec = runtimes[lang];
@@ -43,6 +45,7 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       fail(`${lang}: no runtime loaded`);
       continue;
     }
+    let snapshots: Files = {};
     for (let i = 0; i < src.stages.length; i++) {
       const s = src.stages[i];
       const tests = testsThrough(src, lang, i);
@@ -56,6 +59,13 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       else if (!sol.results.length) message = `${where}: no tests ran`;
       else if (sol.results.some((r) => !r.passed)) message = `${where}: the solution fails ${describeFailures(sol)}`;
       else if (ms > limit) message = `${where}: the solution took ${ms} ms; the limit is ${limit} ms (half of timeLimitMs)`;
+      if (!message) {
+        // The reference's snapshot of a frozen file is the previous part's reference solution; earlier snapshots win.
+        const solution = s.languages[lang]!.solution;
+        if (i > 0) snapshots = { ...frozenSnapshot(compiled, i, src.stages[i - 1].languages[lang]!.solution), ...snapshots };
+        const failed = evaluateChecks(solution, checksThrough(compiled, solution, i, snapshots)).find((c) => !c.passed);
+        if (failed) message = `${where}: the solution fails design check "${failed.name}": ${failed.message}`;
+      }
       if (message) fail(message);
       reports.push({ lang, stage: s.id, kind: 'solution', ok: !message, message, ms, output: sol });
 
