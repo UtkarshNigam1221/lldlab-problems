@@ -56,7 +56,7 @@ stages:
 
 - Stages are cumulative: the user keeps their code, the next stage's `starter/` only **adds** files, and all earlier tests keep running.
 - `solution/` must pass every test of stages 1..N within half of `timeLimitMs`.
-- The combined starter must fail at least one of the stage's tests. Stage 1, and every stage of a `debug` problem, must run without errors.
+- The combined starter must fail at least one of the stage's tests (for `refactor` problems: at least one of its tests or design checks). Stage 1, and every stage of a `debug` or `refactor` problem, must run without errors.
 - Tests use `test(name, fn)` and `assertEqual(actual, expected)`. Test file names must be unique across stages.
 - No network or packages: relative imports only in JS/TS; no `js`, `urllib`, `http`, `socket`, `subprocess` in Python; no `net` (except `net/url` and `net/netip`), `os/exec`, `os/signal`, `plugin`, `syscall`, `unsafe` in Go.
 - Max 40 starter and test files per stage, 200 KB per problem.

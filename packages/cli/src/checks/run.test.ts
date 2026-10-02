@@ -73,4 +73,25 @@ describe('runChecks', () => {
     const { issues } = await runChecks(src, runtimes);
     expect(issues).toEqual([]);
   });
+
+  it('a refactor starter may pass the tests when it fails a design check', async () => {
+    const src = load('design/promo');
+    src.meta.kind = 'refactor';
+    const js = src.stages[0].languages.javascript!;
+    js.starter['promotions.js'] = js.solution['promotions.js'];
+    js.starter['checkout.js'] = js.solution['checkout.js'] + '// SAVE10 is special-cased here\n';
+    src.stages.length = 1;
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues).toEqual([]);
+  });
+
+  it('a refactor starter that passes every test and check asks for nothing', async () => {
+    const src = load('design/promo');
+    src.meta.kind = 'refactor';
+    const js = src.stages[0].languages.javascript!;
+    js.starter['promotions.js'] = js.solution['promotions.js'];
+    src.stages.length = 1;
+    const { issues } = await runChecks(src, runtimes);
+    expect(issues.map((i) => i.message)).toEqual(['javascript stage codes: the starter passes every codes test and design check, so the part asks for nothing']);
+  });
 });

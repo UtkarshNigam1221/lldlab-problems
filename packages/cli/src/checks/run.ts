@@ -74,14 +74,20 @@ export async function runChecks(src: ProblemSource, runtimes: Partial<Record<Lan
       reports.push({ lang, stage: s.id, kind: 'solution', ok: !message, message, ms, output: sol });
 
       start = performance.now();
-      const st = await exec({ files: starterThrough(src, lang, i), tests });
+      const starter = starterThrough(src, lang, i);
+      const st = await exec({ files: starter, tests });
       ms = Math.round(performance.now() - start);
       message = undefined;
-      // Stage 1 and every debug stage must run, so users see failing tests rather than a compile error.
-      const mustRun = i === 0 || src.meta.kind === 'debug';
+      // Stage 1 and every debug or refactor stage must run, so users see failing tests or checks, not a compile error.
+      const mustRun = i === 0 || src.meta.kind === 'debug' || src.meta.kind === 'refactor';
+      const failsTest = st.results.some((r) => r.stage === s.id && !r.passed);
       if (st.error) {
         if (mustRun) message = `${where}: the starter must run without errors: ${st.error}`;
-      } else if (!st.results.some((r) => r.stage === s.id && !r.passed)) {
+      } else if (src.meta.kind === 'refactor') {
+        // A refactor starter works (its tests may pass); what it lacks is the design, so a check must fail instead.
+        const failsCheck = evaluateChecks(starter, checksThrough(compiled, starter, i, starter)).some((c) => c.stage === s.id && !c.passed);
+        if (!failsTest && !failsCheck) message = `${where}: the starter passes every ${s.id} test and design check, so the part asks for nothing`;
+      } else if (!failsTest) {
         message = `${where}: the starter passes every ${s.id} test, so the tests don't check the requirement`;
       }
       if (message) fail(message);
